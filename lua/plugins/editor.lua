@@ -128,6 +128,7 @@ return {
         { "<leader>g", group = "git" },
         { "<leader>o", group = "component" },
         { "<leader>n", group = "run / test" },
+        { "<leader>ng", group = "angular cli" },
         { "<leader>d", group = "debug" },
         { "<leader>gh", group = "hunk" },
         { "<leader>a", group = "ai (claude)" },

@@ -45,6 +45,22 @@ map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (wat
 map("n", "<leader>ns", scripts("run", "start"), { desc = "Start the dev server" })
 map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
 
+-- Angular CLI ---------------------------------------------------------------
+-- <leader>ng is a prefix only, never a leaf: a key that is both an action and
+-- a prefix makes you wait out the timeout every time you use the action.
+local ng = function(schematic)
+  return function() require("config.angular").generate(schematic) end
+end
+map("n", "<leader>ngg", function() require("config.angular").generate_pick() end,
+  { desc = "ng generate (pick a schematic)" })
+map("n", "<leader>ngc", ng("component"), { desc = "ng generate component" })
+map("n", "<leader>ngs", ng("service"), { desc = "ng generate service" })
+map("n", "<leader>ngp", ng("pipe"), { desc = "ng generate pipe" })
+map("n", "<leader>ngd", ng("directive"), { desc = "ng generate directive" })
+map("n", "<leader>ngu", ng("guard"), { desc = "ng generate guard" })
+map("n", "<leader>ngx", function() require("config.angular").palette() end,
+  { desc = "ng command palette" })
+
 -- Saving / quitting ---------------------------------------------------------
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })

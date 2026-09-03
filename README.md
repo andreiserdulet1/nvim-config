@@ -116,6 +116,44 @@ A component is up to four files sharing a stem. These jump between them:
 component uses an inline template rather than opening an empty file. The same
 keys work for services and pipes, where the useful pair is the file and its spec.
 
+### Angular CLI
+
+`<Space>ng` is the Angular CLI prefix (it's a prefix only, never an action, so
+you never sit through a timeout).
+
+| Key | Generates |
+|---|---|
+| `<Space>ngg` | anything — a picker of every schematic this repo offers |
+| `<Space>ngc` | component |
+| `<Space>ngs` | service |
+| `<Space>ngp` | pipe |
+| `<Space>ngd` | directive |
+| `<Space>ngu` | guard |
+| `<Space>ngx` | any other `ng` command — version, update, add, cache, config |
+
+Three things it does that a shell alias doesn't:
+
+**The name prefills from where you are.** Generating a component while editing
+`src/app/ui/data-table-shell/` prefills `ui/data-table-shell/`, so the new files
+land beside the code you're working on rather than at the app root.
+
+**It works out which project you're in.** None of your repos set
+`defaultProject` (Angular dropped it), and `awin-angular-libraries` has fifteen —
+the project is inferred from the path of the file you're editing and passed as
+`--project`, so you're not prompted.
+
+**Nothing is written until you've seen it.** Every generate runs `--dry-run`
+first and shows the exact file list; `y` creates them, `q` cancels. Afterwards the
+new `.ts` opens automatically. This is the part WebStorm's dialog gets right.
+
+The schematic list is read live from `ng generate --help` in that workspace, so
+it reflects what's actually installed — your `angular-eslint` schematics appear in
+`advertiser-payments-ui` and wouldn't in a repo without them.
+
+In `<Space>ngx`, `serve` / `build` / `test` / `lint` go through the repo's
+`package.json` script when one exists, so `advertiser-payments-ui` still runs its
+`load-env.mjs` prelude. Everything else runs `ng` directly.
+
 ### Running the project
 
 `<Space>nr` lists the scripts in this repo's `package.json` and runs the one you

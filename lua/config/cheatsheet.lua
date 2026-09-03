@@ -69,6 +69,20 @@ M.sections = {
     },
   },
   {
+    "ANGULAR CLI",
+    {
+      { "<leader>ngg", "ng generate — pick from every schematic" },
+      { "<leader>ngc", "ng generate component" },
+      { "<leader>ngs", "ng generate service" },
+      { "<leader>ngp", "ng generate pipe" },
+      { "<leader>ngd", "ng generate directive" },
+      { "<leader>ngu", "ng generate guard" },
+      { "<leader>ngx", "Any other ng command (version, update, add, cache)" },
+      { "", "Names prefill from the folder you're in;" },
+      { "", "every generate previews the files first." },
+    },
+  },
+  {
     "RUN & TEST",
     {
       { "<leader>nt", "Test just this component" },
