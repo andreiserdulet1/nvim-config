@@ -6,6 +6,11 @@ local map = vim.keymap.set
 map("n", "<leader>?", function() require("config.cheatsheet").open() end,
   { desc = "Cheatsheet" })
 
+-- The full web guide
+map("n", "<leader>gu", function()
+  vim.ui.open("https://claude.ai/code/artifact/fa81e147-7724-4e98-9a71-0a9f36c71547")
+end, { desc = "Open the web guide" })
+
 -- Saving / quitting ---------------------------------------------------------
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })

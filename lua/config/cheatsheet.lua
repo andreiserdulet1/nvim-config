@@ -99,6 +99,7 @@ M.sections = {
       { "<Esc>", "Clear search highlight" },
       { "<leader>qq", "Quit Neovim" },
       { "<leader>?", "This cheatsheet" },
+      { "<leader>gu", "Open the full web guide in a browser" },
     },
   },
 }

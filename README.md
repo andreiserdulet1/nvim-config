@@ -1,0 +1,192 @@
+# Neovim IDE — Angular / TypeScript + Terraform
+
+A hand-rolled Neovim config, ~30 plugins, built for two jobs: Angular front-ends
+and AWS infrastructure. Everything here is readable in about twenty minutes.
+
+Start it with `v` (the alias already in your `~/.zshrc`) or `nvim`.
+Press `<Space>?` inside Neovim at any time for the keymap cheatsheet.
+
+**Web guide:** https://claude.ai/code/artifact/fa81e147-7724-4e98-9a71-0a9f36c71547
+
+---
+
+## 1. Layout
+
+```
+~/.config/nvim/
+├── init.lua                 leader key + bootstrap
+├── lua/config/
+│   ├── options.lua          editor behaviour, diagnostics, filetypes
+│   ├── keymaps.lua          keymaps that don't belong to a plugin
+│   ├── lazy.lua             plugin manager bootstrap
+│   ├── cheatsheet.lua       the <Space>? popup
+│   └── projects.lua         project switcher over ~/projects
+└── lua/plugins/
+    ├── ui.lua               colorscheme, statusline, buffer tabs, dashboard
+    ├── editor.lua           telescope, neo-tree, which-key, flash, treesitter
+    ├── lsp.lua              mason, language servers, completion
+    ├── lint.lua             prettier/terraform fmt + tflint
+    ├── git.lua              lazygit, gitsigns, diffview
+    └── term.lua             claude + terminals
+```
+
+It is a git repo. If a change breaks something, `git diff` and `git checkout` it.
+
+---
+
+## 2. The ten keys that matter
+
+Learn these first; everything else is discoverable by pressing `<Space>` and waiting.
+
+| Key | Does |
+|---|---|
+| `<Space><Space>` | Find a file |
+| `<Space>fg` | Search text across the project |
+| `<Space>e` | Toggle the file tree |
+| `<Space>gg` | **lazygit** |
+| `gd` | Jump to definition |
+| `gr` | Find every reference |
+| `K` | Show documentation |
+| `<Space>ca` | Code actions (auto-import, quick fix) |
+| `<Space>ac` | Claude |
+| `<Space>?` | The full cheatsheet |
+
+`<Space>` is the leader key. `which-key` shows you the menu if you pause after it,
+so you never have to memorise the rest.
+
+---
+
+## 3. Buffers, not tabs
+
+Open files appear as tabs along the top. They are *buffers* — `<S-h>` and `<S-l>`
+move between them, `<Space>bd` closes one, `<Space>1`–`<Space>9` jump directly.
+`<Space>fb` gives you a searchable list, which beats cycling once you have a dozen open.
+
+---
+
+## 4. Angular
+
+Three language servers attach to a component file:
+
+- **vtsls** — TypeScript: definitions, references, rename, auto-import
+- **angularls** — templates: component properties in `.html`, directive jumps
+- **eslint** — your repo's own flat config, diagnostics as you type
+
+**Each project uses its own toolchain.** Your repos span Angular 18, 19 and 21,
+ESLint 9 and 10, Prettier 2 and 3. The Angular server is started per project with
+its probe path pointed at that repo's `node_modules` first, and Prettier is
+resolved from `node_modules/.bin`. Nothing global overrides your team's config.
+
+Repos that don't ship `@angular/language-service` fall back to a pinned copy in
+`~/.local/share/nvim/angular-fallback`. Project-local always wins.
+
+A daily loop:
+
+1. `<Space><Space>` and type `user-list.component` to open it
+2. `gd` on a service to read it, `<C-o>` to come back
+3. `<Space>cr` to rename a symbol across the whole app
+4. `<Space>ca` on a red squiggle for the quick fix
+5. `<Space>cf` to apply every ESLint autofix in the file
+6. Save — Prettier formats with *this repo's* version
+7. `<Space>tn` for a terminal at the project root, then `yarn start`
+
+If a repo has no `node_modules`, run `yarn install` first — the language servers
+have nothing to read until then.
+
+---
+
+## 5. Terraform and infrastructure
+
+`terraform-ls` gives completion and hover docs on `aws_*` resources, and
+`terraform fmt` runs on save. `tflint` adds lint diagnostics.
+
+**Your `make plan` / Docker workflow is untouched.** The local terraform binary
+(1.16) is used only by the editor; your repos still pin 1.6.1 in `versions.json`
+and run it in a container. The two never meet.
+
+`terragrunt.hcl`, `root.hcl` and `common.hcl` get syntax highlighting but no
+language server — there isn't a good one for Terragrunt.
+
+YAML gets SchemaStore validation, so `docker-compose.yml`, `catalog-info.yaml`
+and GitHub workflows are checked as you type. Dockerfiles and shell scripts have
+servers too.
+
+---
+
+## 6. Git, and learning lazygit
+
+`<Space>gg` opens lazygit for whatever repo the current file is in. It's
+configured with `delta` for readable diffs and `nvim` as its editor.
+
+**Learn it in this order — don't read the whole keymap list.**
+
+*Stage and commit.* Panels are numbered `1`–`5`; `Tab` cycles them. In the Files
+panel (`2`), `Space` stages a file, `Enter` opens it to stage individual lines
+(`Space` on a line, `v` to select a range), `c` writes a commit message, `C` opens
+Neovim for a long one.
+
+*Branch.* Panel `3` is Branches. `n` creates one, `Space` checks one out,
+`d` deletes, `M` merges into the current branch, `r` rebases.
+
+*Rebase interactively.* In panel `4` (Commits), `e` starts an interactive rebase
+from that commit. Then on each commit: `s` squash, `f` fixup, `r` reword,
+`d` drop, `Ctrl-j`/`Ctrl-k` reorder. `m` opens the rebase menu to continue or abort.
+
+*Cherry-pick.* In Commits, `Shift-c` copies a commit, `Shift-v` pastes it onto
+your branch.
+
+*Conflicts.* Conflicted files show in the Files panel. `Enter` on one gives you
+the hunks — pick a side, or `e` to open it in Neovim and edit properly.
+
+`?` inside lazygit shows the keys for whatever panel you're in. `q` quits.
+
+For small things you don't need lazygit at all: `]h`/`[h` jump between changed
+hunks, `<Space>ghs` stages the hunk under the cursor, `<Space>ghp` previews it,
+`<Space>gb` blames the line.
+
+To review a whole branch before opening a PR: `<Space>gm` diffs everything on
+your branch against master in a proper two-pane view. `<Space>gq` closes it.
+
+---
+
+## 7. Claude
+
+`<Space>ac` opens Claude in a split, sharing the project directory.
+
+The reason it's a plugin and not just a terminal: select some lines, press
+`<Space>as`, and Claude receives them as a real file reference. When it proposes
+an edit, the edit opens as a **native Neovim diff** — your version on the left,
+its version on the right. `<Space>aa` accepts, `<Space>ad` rejects. You review
+before anything touches your file.
+
+`<Space>ab` adds the whole current file to its context. `<Space>tc` is a plain
+`claude` terminal if you'd rather use the CLI directly.
+
+---
+
+## 8. When something breaks
+
+| Symptom | Check |
+|---|---|
+| No completion or `gd` does nothing | `:checkhealth vim.lsp` — is a server attached? |
+| Angular template completion missing | Does the repo have `node_modules`? Run `yarn install`. |
+| ESLint silent | `:LspInfo` — is `eslint` attached? Does the repo have a flat config? |
+| Save doesn't format | `:ConformInfo` shows which formatter ran and whether it was found |
+| Formatting the wrong style | Expected if the repo has no Prettier installed — nothing runs by design |
+| Terraform hover empty | `terraform` must be on `PATH`: `which terraform` |
+| Plugin looks broken | `:Lazy` then `S` to sync, or `:Lazy restore` to go back to the lockfile |
+| Server missing | `:Mason` to see and install servers |
+| Something is very wrong | `git -C ~/.config/nvim diff` — you changed something |
+
+`:checkhealth` on its own runs everything.
+
+---
+
+## 9. Updating
+
+- `:Lazy` → `U` updates plugins. `lazy-lock.json` records exact versions; commit it.
+- `:Mason` → `U` updates language servers.
+- `:TSUpdate` updates treesitter parsers.
+
+If an update breaks something: `:Lazy restore` puts every plugin back to the
+lockfile, and `git checkout lazy-lock.json` puts the lockfile back too.
