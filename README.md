@@ -237,6 +237,47 @@ hunks, `<Space>ghs` stages the hunk under the cursor, `<Space>ghp` previews it,
 To review a whole branch before opening a PR: `<Space>gm` diffs everything on
 your branch against master in a proper two-pane view. `<Space>gq` closes it.
 
+### Merge conflicts
+
+The keys are the same whether you use the three-pane view or fix the file in
+place: `<Space>co` takes ours, `<Space>ct` takes theirs, `<Space>cb` takes both,
+`<Space>cn` takes neither, and `]x` / `[x` move between conflicts.
+
+**For anything non-trivial, `<Space>gx`.** It opens the three-pane merge view —
+OURS on the left, the working copy in the middle, THEIRS on the right — the same
+shape as WebStorm's merge dialog. `<Space>cO` and `<Space>cT` take a whole file at
+once when one side wins outright. If there's nothing to merge it says so rather
+than opening an empty diff and leaving you to work out why.
+
+**For a two-line conflict, just open the file.** Conflicted regions are
+highlighted in place and the same keys work, with no extra windows and no mode to
+enter. TypeScript diagnostics are suppressed while markers are present, since a
+conflicted file isn't valid code and the errors are noise.
+
+`<Space>gX` puts every conflicted file in the quickfix list, each entry pointing
+at its first marker — useful when a rebase breaks eight files at once.
+
+Once the markers are gone, `<Space>gg` for lazygit: stage the file, then continue
+the merge or rebase from its rebase menu (`m`).
+
+### Two git settings worth having
+
+Neither is set on this machine, and both make conflicts markedly easier. Run them
+once, in a terminal:
+
+    git config --global merge.conflictstyle zdiff3
+    git config --global rerere.enabled true
+
+The first makes conflict markers include the **common ancestor** between `|||||||`
+and `=======`, not just the two competing versions. Without it you can't tell
+which side actually changed — that's most of why a raw conflict is hard to read.
+
+The second makes git record how you resolved a conflict and replay it
+automatically when the same one reappears. On a long-lived branch being rebased
+repeatedly, it's the difference between tedious and unbearable.
+
+Use `--local` instead of `--global` if you'd rather set them per repository.
+
 ---
 
 ## 8. Claude

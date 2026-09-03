@@ -55,6 +55,80 @@ return {
     },
   },
 
+  -- In-buffer conflict resolution -------------------------------------------
+  -- For a two-line conflict, opening a separate diff view is heavier than the
+  -- job needs. This resolves conflicts in the file you are already looking at.
+  --
+  -- default_mappings is off on purpose: the plugin's defaults are co/ct/cb, and
+  -- `ct` is a real operator-motion (ct) = "change up to the next paren"). Having
+  -- that silently change meaning inside a conflicted buffer would be a trap.
+  -- The keys below match diffview's merge-view keys instead, so conflicts use
+  -- one set of keys wherever you meet them.
+  {
+    "akinsho/git-conflict.nvim",
+    version = "*",
+    event = "BufReadPre",
+    opts = {
+      default_mappings = false,
+      default_commands = true,
+      -- Left off deliberately: the plugin's own implementation calls
+      -- vim.diagnostic.disable(), which Neovim 0.12 removed, so enabling this
+      -- throws on every conflicted buffer. Handled with the current API below.
+      disable_diagnostics = false,
+      highlights = {
+        current = "DiffAdd",
+        incoming = "DiffText",
+        ancestor = "DiffChange",
+      },
+    },
+    config = function(_, opts)
+      require("git-conflict").setup(opts)
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "GitConflictDetected",
+        callback = function(ev)
+          local buf = ev.buf or 0
+          local function map(lhs, rhs, desc)
+            vim.keymap.set("n", lhs, rhs, { buffer = buf, desc = desc })
+          end
+          map("<leader>co", "<cmd>GitConflictChooseOurs<cr>", "Conflict: take ours")
+          map("<leader>ct", "<cmd>GitConflictChooseTheirs<cr>", "Conflict: take theirs")
+          map("<leader>cb", "<cmd>GitConflictChooseBoth<cr>", "Conflict: take both")
+          map("<leader>cn", "<cmd>GitConflictChooseNone<cr>", "Conflict: take neither")
+          map("]x", "<cmd>GitConflictNextConflict<cr>", "Next conflict")
+          map("[x", "<cmd>GitConflictPrevConflict<cr>", "Previous conflict")
+
+          -- Relabel the <leader>c menu while a conflict is present, so which-key
+          -- doesn't advertise "code" when these keys mean something else.
+          pcall(function()
+            require("which-key").add({ "<leader>c", group = "conflict", buffer = buf })
+          end)
+
+          -- A conflicted file isn't valid TypeScript, so its diagnostics are
+          -- noise until the markers are gone.
+          vim.diagnostic.enable(false, { bufnr = buf })
+
+          vim.notify("Conflicts in this file — <leader>co / ct / cb, ]x to move",
+            vim.log.levels.WARN)
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "GitConflictResolved",
+        callback = function(ev)
+          local buf = ev.buf or 0
+          for _, lhs in ipairs({ "<leader>co", "<leader>ct", "<leader>cb", "<leader>cn", "]x", "[x" }) do
+            pcall(vim.keymap.del, "n", lhs, { buffer = buf })
+          end
+          vim.diagnostic.enable(true, { bufnr = buf })
+          pcall(function()
+            require("which-key").add({ "<leader>c", group = "code", buffer = buf })
+          end)
+        end,
+      })
+    end,
+  },
+
   -- Diffview: review a whole branch or PR inside Neovim ----------------------
   {
     "sindrets/diffview.nvim",
@@ -64,6 +138,27 @@ return {
       { "<leader>gm", "<cmd>DiffviewOpen origin/master...HEAD<cr>", desc = "Diff vs master" },
       { "<leader>gH", "<cmd>DiffviewFileHistory %<cr>", desc = "File history (diffview)" },
       { "<leader>gq", "<cmd>DiffviewClose<cr>", desc = "Close diffview" },
+      {
+        "<leader>gx",
+        function()
+          -- Open the three-pane merge view, but only when there is actually
+          -- something to merge. Opening diffview on a clean repo just shows an
+          -- empty working-tree diff and leaves you guessing.
+          local files = require("config.conflicts").unmerged()
+          if #files == 0 then
+            vim.notify("No conflicts in this repo")
+            return
+          end
+          vim.notify(#files .. " conflicted file(s)")
+          vim.cmd("DiffviewOpen")
+        end,
+        desc = "Resolve conflicts (3-pane)",
+      },
+      {
+        "<leader>gX",
+        function() require("config.conflicts").to_quickfix() end,
+        desc = "List conflicted files",
+      },
     },
     opts = {
       enhanced_diff_hl = true,

@@ -114,6 +114,21 @@ M.sections = {
     },
   },
   {
+    "MERGE CONFLICTS",
+    {
+      { "<leader>gx", "Open the 3-pane merge view  <- start here" },
+      { "<leader>gX", "List every conflicted file" },
+      { "]x / [x", "Next / previous conflict" },
+      { "<leader>co", "Take OURS (what you had)" },
+      { "<leader>ct", "Take THEIRS (what came in)" },
+      { "<leader>cb", "Take both sides" },
+      { "<leader>cn", "Take neither, delete the region" },
+      { "<leader>cO", "Take ours for the WHOLE file (merge view)" },
+      { "<leader>cT", "Take theirs for the whole file (merge view)" },
+      { "<leader>gg", "then stage the file and continue in lazygit" },
+    },
+  },
+  {
     "CLAUDE & TERMINAL",
     {
       { "<leader>ac", "Toggle Claude" },
