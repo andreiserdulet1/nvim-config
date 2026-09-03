@@ -69,6 +69,41 @@ move between them, `<Space>bd` closes one, `<Space>1`–`<Space>9` jump directly
 a two-pane layout doesn't collapse the layout. `<Space>bD` discards unsaved changes,
 `<Space>bo` closes everything else.
 
+### Multi-cursor and replace
+
+| Key | Does |
+|---|---|
+| `<C-n>` | add a cursor at the next match of the word or selection |
+| `<C-p>` | skip this match |
+| `<Space>ma` | a cursor on every match in the file |
+| `<Space>mj` / `<Space>mk` | add a cursor below / above |
+| `<C-LeftMouse>` | add a cursor where you click |
+| `<Esc>` | clear the extra cursors |
+
+`<Esc>` clears cursors when any exist and otherwise still clears the search
+highlight, so the old behaviour is intact.
+
+`<Space>sr` opens a search-and-replace buffer over the whole project — type a
+pattern and a replacement, see every match live, apply selectively. `<Space>sw`
+prefills the word under the cursor, `<Space>sf` limits it to the current file, and
+in visual mode `<Space>sr` prefills the selection. Build output is excluded, so a
+replace can't rewrite `node_modules` or `dist`.
+
+### Pull requests
+
+`<Space>pl` lists this repo's PRs, `<Space>pp` opens the one for your branch,
+`<Space>pr` starts a review and `<Space>pR` submits it. `<Space>pi` for issues,
+`<Space>ps` to search. It drives the `gh` CLI you're already logged into.
+
+### Sessions and breadcrumbs
+
+`<Space>qs` restores the session for the repo you're in — buffers, splits and
+cursor positions. `<Space>ql` restores the last one you had open anywhere,
+`<Space>qd` stops the current one being saved.
+
+The winbar shows `Class > method` for the file you're in; `<Space>;` jumps through
+it. It's suppressed in the tree, terminals, lists and diff views.
+
 ### Windows and terminals
 
 `<C-h/j/k/l>` moves between splits — including **from inside a terminal**, so you
@@ -115,6 +150,17 @@ A component is up to four files sharing a stem. These jump between them:
 `prepayment-ui` writes most templates inline, so `<Space>oh` there tells you the
 component uses an inline template rather than opening an empty file. The same
 keys work for services and pipes, where the useful pair is the file and its spec.
+
+### Renaming files
+
+Rename or move a file in the tree and every import that pointed at it is
+rewritten. `vtsls` has `updateImportsOnFileMove` on, and neo-tree's rename events
+are wired through to it, so the language server hears about the move. Without that
+wiring the rename happens silently and you find out at compile time.
+
+`<Space>cI` organizes imports and `<Space>cR` removes unused ones. `<Space>cR` is
+deliberately bound to *remove unused imports* rather than TypeScript's "remove all
+unused code", which would also delete unused variables and functions.
 
 ### Angular CLI
 

@@ -114,6 +114,29 @@ return {
     },
   },
 
+  -- Renaming a file should fix the imports ----------------------------------
+  -- vtsls has updateImportsOnFileMove enabled, but it only acts when the
+  -- editor *tells* it a file moved. Without this, renaming a component in the
+  -- tree leaves every importing file broken until the next compile.
+  {
+    "antosha417/nvim-lsp-file-operations",
+    dependencies = { "nvim-lua/plenary.nvim", "nvim-neo-tree/neo-tree.nvim" },
+    event = "LspAttach",
+    opts = {},
+  },
+
+  -- Session per project ------------------------------------------------------
+  {
+    "folke/persistence.nvim",
+    event = "BufReadPre",
+    opts = {},
+    keys = {
+      { "<leader>qs", function() require("persistence").load() end, desc = "Restore this project's session" },
+      { "<leader>ql", function() require("persistence").load({ last = true }) end, desc = "Restore the last session" },
+      { "<leader>qd", function() require("persistence").stop() end, desc = "Don't save this session" },
+    },
+  },
+
   -- which-key: press <leader> and wait to see what's available ---------------
   {
     "folke/which-key.nvim",
@@ -135,6 +158,10 @@ return {
         { "<leader>t", group = "terminal" },
         { "<leader>x", group = "diagnostics" },
         { "<leader>u", group = "toggle" },
+        { "<leader>m", group = "multi-cursor" },
+        { "<leader>s", group = "search / replace" },
+        { "<leader>p", group = "pull requests" },
+        { "<leader>q", group = "session / quit" },
         { "<leader>w", group = "window" },
       },
     },
@@ -189,6 +216,21 @@ return {
       require("mini.comment").setup()    -- gcc to comment a line, gc in visual mode
       require("mini.ai").setup()         -- better text objects: cif, daf, ci(, etc.
     end,
+  },
+
+  -- Close and rename HTML/Angular tag pairs as you type ---------------------
+  -- mini.pairs handles brackets and quotes; this handles <div> -> </div>.
+  -- The htmlangular alias matters: Neovim gives *.component.html that
+  -- filetype, and autotag keys off filetype, so without it this would do
+  -- nothing in exactly the files that need it.
+  {
+    "windwp/nvim-ts-autotag",
+    ft = { "html", "htmlangular", "xml", "javascript", "typescript",
+           "javascriptreact", "typescriptreact", "vue", "markdown" },
+    opts = {
+      opts = { enable_close = true, enable_rename = true, enable_close_on_slash = false },
+      aliases = { htmlangular = "html" },
+    },
   },
 
   -- Treesitter: accurate syntax highlighting ------------------------------

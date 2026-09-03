@@ -45,6 +45,15 @@ map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (wat
 map("n", "<leader>ns", scripts("run", "start"), { desc = "Start the dev server" })
 map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
 
+-- Colour swatches in CSS/SCSS are native in Neovim 0.12: cssls advertises
+-- colorProvider and vim.lsp.document_color renders the swatches, on by
+-- default. No plugin needed -- this just makes it toggleable.
+map("n", "<leader>uc", function()
+  local on = vim.lsp.document_color.is_enabled({ bufnr = 0 })
+  vim.lsp.document_color.enable(not on, { bufnr = 0 })
+  vim.notify("Colour swatches: " .. (on and "off" or "on"))
+end, { desc = "Toggle colour swatches" })
+
 -- Angular CLI ---------------------------------------------------------------
 -- <leader>ng is a prefix only, never a leaf: a key that is both an action and
 -- a prefix makes you wait out the timeout every time you use the action.
@@ -65,8 +74,17 @@ map("n", "<leader>ngx", function() require("config.angular").palette() end,
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })
 
--- Clear search highlight on Escape ------------------------------------------
-map("n", "<Esc>", "<cmd>nohlsearch<cr>", { desc = "Clear search highlight" })
+-- Escape clears extra cursors first, otherwise the search highlight.
+-- package.loaded is checked rather than require()d so pressing Esc doesn't
+-- force multicursor to load on a session where it was never used.
+map("n", "<Esc>", function()
+  local mc = package.loaded["multicursor-nvim"]
+  if mc and mc.hasCursors() then
+    mc.clearCursors()
+  else
+    vim.cmd("nohlsearch")
+  end
+end, { desc = "Clear cursors / search highlight" })
 
 -- Window navigation ---------------------------------------------------------
 map("n", "<C-h>", "<C-w>h", { desc = "Window left" })

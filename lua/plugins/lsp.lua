@@ -81,9 +81,16 @@ return {
       ----------------------------------------------------------------------
       -- Shared capabilities: tell every server what blink.cmp can render.
       ----------------------------------------------------------------------
-      vim.lsp.config("*", {
-        capabilities = require("blink.cmp").get_lsp_capabilities({}, true),
-      })
+      -- Merged, not replaced: blink.cmp supplies the completion capabilities
+      -- and lsp-file-operations adds workspace/willRenameFiles, which is what
+      -- lets a rename in the file tree rewrite imports. Assigning either one
+      -- on its own would silently drop the other.
+      local capabilities = require("blink.cmp").get_lsp_capabilities({}, true)
+      local ok_fileops, fileops = pcall(require, "lsp-file-operations")
+      if ok_fileops then
+        capabilities = vim.tbl_deep_extend("force", capabilities, fileops.default_capabilities())
+      end
+      vim.lsp.config("*", { capabilities = capabilities })
 
       ----------------------------------------------------------------------
       -- Per-server overrides. nvim-lspconfig ships the base definitions;
@@ -204,7 +211,7 @@ return {
             "--ngProbeLocations", probe,
           },
           root_dir = root,
-          capabilities = require("blink.cmp").get_lsp_capabilities({}, true),
+          capabilities = capabilities,
         }, { bufnr = bufnr })
       end
 
@@ -248,6 +255,27 @@ return {
           local client = vim.lsp.get_client_by_id(ev.data.client_id)
           if client and client.name == "eslint" then
             map("<leader>cf", "<cmd>LspEslintFixAll<cr>", "ESLint fix all")
+          end
+
+          -- vtsls advertises these as source actions; applying them directly is
+          -- quicker than hunting for them in the code-action menu.
+          if client and (client.name == "vtsls" or client.name == "ts_ls") then
+            map("<leader>cI", function()
+              vim.lsp.buf.code_action({
+                context = { only = { "source.organizeImports" }, diagnostics = {} },
+                apply = true,
+              })
+            end, "Organize imports")
+            -- Deliberately source.removeUnusedImports, not source.removeUnused.ts:
+            -- the latter is "Remove all unused code" and would also delete
+            -- unused variables and functions, which is not what a key called
+            -- "remove unused imports" should do.
+            map("<leader>cR", function()
+              vim.lsp.buf.code_action({
+                context = { only = { "source.removeUnusedImports" }, diagnostics = {} },
+                apply = true,
+              })
+            end, "Remove unused imports")
           end
 
           -- Inlay hints: inferred types shown inline. Off by default so the

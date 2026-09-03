@@ -55,6 +55,34 @@ return {
     },
   },
 
+  -- GitHub pull requests, in the editor --------------------------------------
+  -- Drives the `gh` CLI you're already authenticated with, so reviewing a
+  -- teammate's branch doesn't mean a browser round-trip. commissions-ui is at
+  -- PR #152 and aws-infrastructure-billing at #410, so this gets real use.
+  {
+    "pwntester/octo.nvim",
+    cmd = "Octo",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim",
+      "nvim-tree/nvim-web-devicons",
+    },
+    opts = {
+      picker = "telescope",
+      use_local_fs = false,
+      enable_builtin = true,
+      suppress_missing_scope = { projects_v2 = true },
+    },
+    keys = {
+      { "<leader>pl", "<cmd>Octo pr list<cr>", desc = "PRs in this repo" },
+      { "<leader>pp", "<cmd>Octo pr<cr>", desc = "PR for this branch" },
+      { "<leader>pr", "<cmd>Octo review start<cr>", desc = "Start a review" },
+      { "<leader>pR", "<cmd>Octo review submit<cr>", desc = "Submit the review" },
+      { "<leader>pi", "<cmd>Octo issue list<cr>", desc = "Issues" },
+      { "<leader>ps", "<cmd>Octo search<cr>", desc = "Search PRs and issues" },
+    },
+  },
+
   -- In-buffer conflict resolution -------------------------------------------
   -- For a two-line conflict, opening a separate diff view is heavier than the
   -- job needs. This resolves conflicts in the file you are already looking at.

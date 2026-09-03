@@ -206,6 +206,57 @@ return {
     end,
   },
 
+  -- Breadcrumbs in the winbar ------------------------------------------------
+  -- Shows Class > method at the top of the window, which is the orientation
+  -- you lose in a 400-line component. Safe with laststatus = 3.
+  {
+    "Bekaboo/dropbar.nvim",
+    event = "BufReadPost",
+    opts = {
+      bar = {
+        enable = function(buf, win, _)
+          if not vim.api.nvim_buf_is_valid(buf) or not vim.api.nvim_win_is_valid(win) then
+            return false
+          end
+          -- A winbar is noise in the tree, in lists and in terminals.
+          local ft = vim.bo[buf].filetype
+          local skip = {
+            ["neo-tree"] = true, ["trouble"] = true, ["toggleterm"] = true,
+            ["dapui_scopes"] = true, ["dapui_breakpoints"] = true,
+            ["dapui_stacks"] = true, ["dapui_watches"] = true, ["dapui_console"] = true,
+            ["dap-repl"] = true, ["snacks_dashboard"] = true, ["cheatsheet"] = true,
+            ["grug-far"] = true, ["octo"] = true, ["help"] = true, ["qf"] = true,
+            ["DiffviewFiles"] = true, ["DiffviewFileHistory"] = true,
+          }
+          if skip[ft] or vim.bo[buf].buftype ~= "" then return false end
+          return true
+        end,
+      },
+    },
+    keys = {
+      { "<leader>;", function() require("dropbar.api").pick() end, desc = "Pick from the breadcrumb" },
+    },
+  },
+
+  -- Markdown, rendered in place ----------------------------------------------
+  -- 474 markdown files across these repos, including prepayment-service/adrs
+  -- and four docs/ trees.
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown", "codecompanion" },
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+    opts = {
+      heading = { sign = false, width = "block", left_pad = 0, right_pad = 2 },
+      code = { sign = false, width = "block", left_pad = 2, right_pad = 2 },
+      -- Render everywhere except the line you're editing, so the raw syntax is
+      -- there when you need to change it.
+      anti_conceal = { enabled = true },
+    },
+    keys = {
+      { "<leader>um", "<cmd>RenderMarkdown toggle<cr>", desc = "Toggle markdown rendering" },
+    },
+  },
+
   -- Start screen, big-file handling, pretty notifications -------------------
   {
     "folke/snacks.nvim",
