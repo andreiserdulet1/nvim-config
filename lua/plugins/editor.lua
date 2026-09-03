@@ -126,6 +126,8 @@ return {
         { "<leader>b", group = "buffer" },
         { "<leader>c", group = "code" },
         { "<leader>g", group = "git" },
+        { "<leader>o", group = "component" },
+        { "<leader>n", group = "npm" },
         { "<leader>gh", group = "hunk" },
         { "<leader>a", group = "ai (claude)" },
         { "<leader>t", group = "terminal" },

@@ -51,6 +51,9 @@ Learn these first; everything else is discoverable by pressing `<Space>` and wai
 | `<Space>ac` | Claude |
 | `<Space>?` | The full cheatsheet |
 
+`<Space>ut` switches between the light and dark palette; the choice is remembered
+next time you start. Both match the web guide exactly.
+
 `<Space>` is the leader key. `which-key` shows you the menu if you pause after it,
 so you never have to memorise the rest.
 
@@ -79,6 +82,29 @@ resolved from `node_modules/.bin`. Nothing global overrides your team's config.
 
 Repos that don't ship `@angular/language-service` fall back to a pinned copy in
 `~/.local/share/nvim/angular-fallback`. Project-local always wins.
+
+### Moving around a component
+
+A component is up to four files sharing a stem. These jump between them:
+
+| Key | Goes to |
+|---|---|
+| `<Space>ot` | the `.ts` |
+| `<Space>oh` | the `.html` template |
+| `<Space>os` | the `.scss` styles |
+| `<Space>op` | the `.spec.ts` |
+| `<Space>oo` | cycle through whichever exist |
+
+`prepayment-ui` writes most templates inline, so `<Space>oh` there tells you the
+component uses an inline template rather than opening an empty file. The same
+keys work for services and pipes, where the useful pair is the file and its spec.
+
+### Running the project
+
+`<Space>nr` lists the scripts in this repo's `package.json` and runs the one you
+pick with `yarn`, in a terminal at the project root. It runs the *named script*,
+never a reconstructed command — which is why `advertiser-payments-ui` correctly
+runs its `load-env.mjs` prelude before `ng test`.
 
 A daily loop:
 

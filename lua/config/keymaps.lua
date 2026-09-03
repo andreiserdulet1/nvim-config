@@ -11,6 +11,32 @@ map("n", "<leader>gu", function()
   vim.ui.open("https://claude.ai/code/artifact/fa81e147-7724-4e98-9a71-0a9f36c71547")
 end, { desc = "Open the web guide" })
 
+-- Light / dark, matching the two palettes in the web guide. The choice is
+-- written to a small file so it survives restarting Neovim.
+local theme_file = vim.fn.stdpath("data") .. "/theme-background"
+map("n", "<leader>ut", function()
+  local next_bg = vim.o.background == "dark" and "light" or "dark"
+  vim.o.background = next_bg
+  vim.cmd.colorscheme("tokyonight")
+  pcall(vim.fn.writefile, { next_bg }, theme_file)
+  vim.notify("Theme: " .. next_bg)
+end, { desc = "Toggle light/dark theme" })
+
+-- Angular: jump between a component's .ts / .html / .scss / .spec.ts ---------
+local component = function(kind)
+  return function() require("config.component").open(kind) end
+end
+map("n", "<leader>ot", component("ts"), { desc = "Component: TypeScript" })
+map("n", "<leader>oh", component("html"), { desc = "Component: template" })
+map("n", "<leader>os", component("style"), { desc = "Component: styles" })
+map("n", "<leader>op", component("spec"), { desc = "Component: spec" })
+map("n", "<leader>oo", function() require("config.component").cycle() end,
+  { desc = "Component: cycle files" })
+
+-- Run a script from this project's package.json ------------------------------
+map("n", "<leader>nr", function() require("config.scripts").pick() end,
+  { desc = "Run package.json script" })
+
 -- Saving / quitting ---------------------------------------------------------
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })

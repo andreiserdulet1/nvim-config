@@ -57,6 +57,17 @@ M.sections = {
     },
   },
   {
+    "ANGULAR",
+    {
+      { "<leader>ot", "Go to the component's .ts" },
+      { "<leader>oh", "Go to its .html template" },
+      { "<leader>os", "Go to its .scss styles" },
+      { "<leader>op", "Go to its .spec.ts" },
+      { "<leader>oo", "Cycle through whichever of those exist" },
+      { "<leader>nr", "Run a script from this repo's package.json" },
+    },
+  },
+  {
     "GIT",
     {
       { "<leader>gg", "lazygit for this repo  <- the main one" },
@@ -98,6 +109,7 @@ M.sections = {
       { "<C-s>", "Save" },
       { "<Esc>", "Clear search highlight" },
       { "<leader>qq", "Quit Neovim" },
+      { "<leader>ut", "Switch between the light and dark palette" },
       { "<leader>?", "This cheatsheet" },
       { "<leader>gu", "Open the full web guide in a browser" },
     },
