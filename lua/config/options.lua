@@ -88,3 +88,22 @@ vim.filetype.add({
     hcl = "hcl",
   },
 })
+
+-- A CSV over snacks' 1.5 MB bigfile threshold gets filetype "bigfile", not
+-- "csv", so csvview neither loads nor renders it automatically -- which is the
+-- guard doing its job on an 11,000-row export. The manual toggle still works,
+-- so say so instead of leaving you wondering why the table didn't appear.
+--
+-- This lives here rather than in csvview's own config because that config only
+-- runs once csvview loads, and csvview never loads for a "bigfile" buffer.
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "bigfile",
+  callback = function(ev)
+    local path = vim.api.nvim_buf_get_name(ev.buf)
+    if not path:match("%.[ct]sv$") then return end
+    vim.schedule(function()
+      vim.notify(("%s is %.1f MB — press <leader>uv to render it as a table")
+        :format(vim.fn.fnamemodify(path, ":t"), vim.fn.getfsize(path) / 1024 / 1024))
+    end)
+  end,
+})

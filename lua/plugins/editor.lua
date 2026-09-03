@@ -234,6 +234,49 @@ return {
     },
   },
 
+  -- CSV as a table -----------------------------------------------------------
+  -- 541 CSV files across these repos. The awin-localization exports are the
+  -- reason this earns its place: two quoted columns, no header row, unreadable
+  -- as raw text.
+  {
+    "hat0uma/csvview.nvim",
+    ft = { "csv", "tsv", "csv_semicolon", "csv_whitespace", "csv_pipe", "rfc_csv", "rfc_semicolon" },
+    cmd = { "CsvViewEnable", "CsvViewDisable", "CsvViewToggle" },
+    opts = {
+      parser = { comments = { "#", "//" } },
+      view = {
+        display_mode = "border",   -- real column separators, not just highlights
+        -- Off by default: most of these files are locale exports with no header,
+        -- and treating their first translation as a column title is worse than
+        -- having no header styling at all. <leader>uh turns it on per file.
+        header_lnum = false,
+        sticky_header = { enabled = false },
+      },
+      keymaps = {
+        jump_next_field_end = { "<Tab>", mode = { "n", "v" } },
+        jump_prev_field_end = { "<S-Tab>", mode = { "n", "v" } },
+      },
+    },
+    config = function(_, opts)
+      require("csvview").setup(opts)
+
+      -- Auto-enable for reasonably sized files. A multi-megabyte export is left
+      -- to the manual toggle so opening one never stalls the editor.
+      local MAX = 2 * 1024 * 1024
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "csv", "tsv", "csv_semicolon", "csv_whitespace", "csv_pipe" },
+        callback = function(ev)
+          local path = vim.api.nvim_buf_get_name(ev.buf)
+          local size = path ~= "" and vim.fn.getfsize(path) or 0
+          if size >= 0 and size <= MAX then
+            pcall(vim.cmd, "CsvViewEnable")
+          end
+        end,
+      })
+
+    end,
+  },
+
   -- Treesitter: accurate syntax highlighting ------------------------------
   -- nvim-treesitter's `main` branch (the current default) dropped the old
   -- setup({ ensure_installed = ... }) API. Parsers are installed explicitly

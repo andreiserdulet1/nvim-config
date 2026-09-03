@@ -218,6 +218,8 @@ M.sections = {
       { "<leader>ut", "Switch between the light and dark palette" },
       { "<leader>um", "Toggle markdown rendering" },
       { "<leader>uc", "Toggle colour swatches" },
+      { "<leader>uv", "Toggle CSV table view" },
+      { "<leader>uh", "Toggle the CSV header row" },
       { "<leader>?", "This cheatsheet" },
       { "<leader>gu", "Open the full web guide in a browser" },
     },

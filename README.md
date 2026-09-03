@@ -299,7 +299,26 @@ adjust `source_map_overrides` in `lua/plugins/debug.lua`. Angular's dev server
 changed how it emits map paths in v17, so this is the setting most likely to need
 a nudge on a given repo.
 
-## 6. Terraform and infrastructure
+## 6. CSV files
+
+You have 541 of them. Open one and it renders as an aligned table, quoted fields
+and all — `<Space>uv` toggles back to raw text, `<Tab>` and `<S-Tab>` jump between
+fields.
+
+`<Space>uh` controls the header row, and it's off by default on purpose: the
+`awin-localization` exports have no header, so treating their first translation as
+a column title would be wrong. Turn it on for the files that do have one, like
+`retrieve-duplicate-pm/duplicate.csv`.
+
+Quoted fields containing commas stay in one column — verified on a row where a
+naive split gives 7 columns and the correct answer is 3.
+
+**Files over 1.5 MB don't render automatically.** snacks' bigfile guard gives them
+the `bigfile` filetype to keep the editor responsive, so `aa_DJ.awin.csv` (1.6 MB,
+11,196 rows) opens as plain text with a note telling you to press `<Space>uv`. The
+manual toggle works fine on it.
+
+## 7. Terraform and infrastructure
 
 `terraform-ls` gives completion and hover docs on `aws_*` resources, and
 `terraform fmt` runs on save. `tflint` adds lint diagnostics.
@@ -317,7 +336,7 @@ servers too.
 
 ---
 
-## 7. Git, and learning lazygit
+## 8. Git, and learning lazygit
 
 `<Space>gg` opens lazygit for whatever repo the current file is in. It's
 configured with `delta` for readable diffs and `nvim` as its editor.
@@ -394,7 +413,7 @@ Use `--local` instead of `--global` if you'd rather set them per repository.
 
 ---
 
-## 8. Claude
+## 9. Claude
 
 `<Space>ac` opens Claude in a split, sharing the project directory.
 
@@ -409,7 +428,7 @@ before anything touches your file.
 
 ---
 
-## 9. When something breaks
+## 10. When something breaks
 
 | Symptom | Check |
 |---|---|
@@ -427,7 +446,7 @@ before anything touches your file.
 
 ---
 
-## 10. Updating
+## 11. Updating
 
 - `:Lazy` → `U` updates plugins. `lazy-lock.json` records exact versions; commit it.
 - `:Mason` → `U` updates language servers.

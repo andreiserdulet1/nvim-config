@@ -54,6 +54,25 @@ map("n", "<leader>uc", function()
   vim.notify("Colour swatches: " .. (on and "off" or "on"))
 end, { desc = "Toggle colour swatches" })
 
+-- CSV table view ------------------------------------------------------------
+map("n", "<leader>uv", "<cmd>CsvViewToggle display_mode=border<cr>",
+  { desc = "Toggle CSV table view" })
+
+-- Header treatment is per file: the locale exports have no header row, but
+-- duplicate.csv and allcardsfile.csv do. This flips it for the current buffer.
+vim.b.csv_header_on = false
+map("n", "<leader>uh", function()
+  if vim.bo.filetype:match("csv") == nil and vim.bo.filetype ~= "tsv" then
+    vim.notify("Not a CSV buffer", vim.log.levels.WARN)
+    return
+  end
+  local on = vim.b.csv_header_on == true
+  vim.b.csv_header_on = not on
+  vim.cmd("CsvViewDisable")
+  vim.cmd("CsvViewEnable display_mode=border header_lnum=" .. (on and "false" or "1"))
+  vim.notify("CSV header row: " .. (on and "off" or "line 1"))
+end, { desc = "Toggle CSV header row" })
+
 -- GitHub Actions -----------------------------------------------------------
 -- Reading runs is unguarded; dispatching always confirms, and anything aimed
 -- at prod has to be typed out. See lua/config/actions.lua.
