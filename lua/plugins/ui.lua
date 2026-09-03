@@ -164,8 +164,12 @@ return {
     "akinsho/bufferline.nvim",
     event = "VeryLazy",
     keys = {
-      { "<leader>bd", "<cmd>bdelete<cr>", desc = "Close buffer" },
-      { "<leader>bo", "<cmd>BufferLineCloseOthers<cr>", desc = "Close other buffers" },
+      -- Snacks.bufdelete closes the buffer but leaves the window alone, so a
+      -- split survives instead of collapsing the way :bdelete makes it.
+      { "<leader>bd", function() require("snacks").bufdelete() end, desc = "Close buffer" },
+      { "<leader>bD", function() require("snacks").bufdelete({ force = true }) end,
+        desc = "Close buffer (discard changes)" },
+      { "<leader>bo", function() require("snacks").bufdelete.other() end, desc = "Close other buffers" },
       { "<leader>bp", "<cmd>BufferLineTogglePin<cr>", desc = "Pin buffer" },
     },
     opts = {

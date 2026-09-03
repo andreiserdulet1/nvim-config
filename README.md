@@ -65,6 +65,23 @@ Open files appear as tabs along the top. They are *buffers* — `<S-h>` and `<S-
 move between them, `<Space>bd` closes one, `<Space>1`–`<Space>9` jump directly.
 `<Space>fb` gives you a searchable list, which beats cycling once you have a dozen open.
 
+`<Space>bd` deletes the buffer but **leaves your split alone**, so closing a file in
+a two-pane layout doesn't collapse the layout. `<Space>bD` discards unsaved changes,
+`<Space>bo` closes everything else.
+
+### Windows and terminals
+
+`<C-h/j/k/l>` moves between splits — including **from inside a terminal**, so you
+don't have to escape terminal mode first. `<Space>wm` maximises the current split
+and restores it, `<Space>wo` closes every other window.
+
+Terminals: `<Space>tt` floats one, `<Space>tn` opens one at the project root,
+`<Space>tl` lists and switches between them, `<Space>t1`–`<Space>t3` jump directly,
+`<Space>tx` closes the current one and `<Space>tX` closes them all.
+
+And `q` closes the read-only windows that otherwise strand you — help, quickfix,
+`:checkhealth`, `:LspInfo`, blame.
+
 ---
 
 ## 4. Angular
@@ -121,7 +138,54 @@ have nothing to read until then.
 
 ---
 
-## 5. Terraform and infrastructure
+### Running tests
+
+Every repo here uses Karma + Jasmine, so there is no neotest adapter. Instead the
+keys drive the repo's own test script with Karma's `--include`:
+
+| Key | Runs |
+|---|---|
+| `<Space>nt` | just this component's spec |
+| `<Space>na` | the whole suite, once |
+| `<Space>nw` | the whole suite, watching |
+| `<Space>ns` | the dev server |
+| `<Space>nl` | lint |
+| `<Space>nr` | pick any script |
+
+`<Space>nt` works from the `.ts`, the `.html` or the `.scss` — it resolves the
+component's spec either way. Where a repo defines `test-headless` it uses that,
+so no Chrome window appears; otherwise it appends `--watch=false` for a one-shot
+run. In `advertiser-payments-ui` a focused run is ~15 seconds against 2 tests
+rather than the full 136-spec suite.
+
+## 5. Debugging
+
+`<Space>db` sets a breakpoint, `<Space>dc` starts. The debugger drives Chrome
+through `js-debug-adapter` and maps the running bundle back to your `.ts` files.
+
+| Key | Does |
+|---|---|
+| `<Space>db` / `<Space>dB` | breakpoint / conditional breakpoint |
+| `<Space>dc` | start or continue |
+| `<Space>di` `<Space>do` `<Space>dO` | step into / over / out |
+| `<Space>du` | show or hide the panels |
+| `<Space>dw` | watch the expression under the cursor |
+| `<Space>dt` | stop |
+
+Start the dev server first (`<Space>ns`), then `<Space>dc` and pick
+**"launch Chrome on the dev server"**. Chrome opens in a separate profile, so your
+normal session and its tabs are untouched. The alternative config attaches to a
+Chrome you started yourself with `--remote-debugging-port=9222`.
+
+Nothing debug-related loads until you press a `<Space>d` key, so it costs nothing
+on startup if you never use it.
+
+**If a breakpoint goes hollow and never hits**, the source maps aren't lining up —
+adjust `source_map_overrides` in `lua/plugins/debug.lua`. Angular's dev server
+changed how it emits map paths in v17, so this is the setting most likely to need
+a nudge on a given repo.
+
+## 6. Terraform and infrastructure
 
 `terraform-ls` gives completion and hover docs on `aws_*` resources, and
 `terraform fmt` runs on save. `tflint` adds lint diagnostics.
@@ -139,7 +203,7 @@ servers too.
 
 ---
 
-## 6. Git, and learning lazygit
+## 7. Git, and learning lazygit
 
 `<Space>gg` opens lazygit for whatever repo the current file is in. It's
 configured with `delta` for readable diffs and `nvim` as its editor.
@@ -175,7 +239,7 @@ your branch against master in a proper two-pane view. `<Space>gq` closes it.
 
 ---
 
-## 7. Claude
+## 8. Claude
 
 `<Space>ac` opens Claude in a split, sharing the project directory.
 
@@ -190,7 +254,7 @@ before anything touches your file.
 
 ---
 
-## 8. When something breaks
+## 9. When something breaks
 
 | Symptom | Check |
 |---|---|
@@ -208,7 +272,7 @@ before anything touches your file.
 
 ---
 
-## 9. Updating
+## 10. Updating
 
 - `:Lazy` → `U` updates plugins. `lazy-lock.json` records exact versions; commit it.
 - `:Mason` → `U` updates language servers.

@@ -33,9 +33,17 @@ map("n", "<leader>op", component("spec"), { desc = "Component: spec" })
 map("n", "<leader>oo", function() require("config.component").cycle() end,
   { desc = "Component: cycle files" })
 
--- Run a script from this project's package.json ------------------------------
-map("n", "<leader>nr", function() require("config.scripts").pick() end,
-  { desc = "Run package.json script" })
+-- Run and test this project --------------------------------------------------
+local scripts = function(fn, ...)
+  local args = { ... }
+  return function() require("config.scripts")[fn](unpack(args)) end
+end
+map("n", "<leader>nr", scripts("pick"), { desc = "Pick a package.json script" })
+map("n", "<leader>nt", scripts("test_file"), { desc = "Test this component" })
+map("n", "<leader>na", scripts("test_all", false), { desc = "Test everything (once)" })
+map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (watch)" })
+map("n", "<leader>ns", scripts("run", "start"), { desc = "Start the dev server" })
+map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
 
 -- Saving / quitting ---------------------------------------------------------
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
@@ -52,6 +60,22 @@ map("n", "<C-l>", "<C-w>l", { desc = "Window right" })
 map("n", "<leader>|", "<C-w>v", { desc = "Split vertical" })
 map("n", "<leader>-", "<C-w>s", { desc = "Split horizontal" })
 map("n", "<leader>wd", "<C-w>c", { desc = "Close window" })
+
+-- More window management ----------------------------------------------------
+map("n", "<leader>wo", "<C-w>o", { desc = "Close other windows" })
+map("n", "<leader>w=", "<C-w>=", { desc = "Balance windows" })
+map("n", "<leader>wm", function()
+  -- Maximise the current split, or restore the previous layout if already
+  -- maximised. Handy for reading one file in a busy layout.
+  if vim.t.maximized then
+    vim.cmd("wincmd =")
+    vim.t.maximized = false
+  else
+    vim.cmd("wincmd _")
+    vim.cmd("wincmd |")
+    vim.t.maximized = true
+  end
+end, { desc = "Maximise / restore window" })
 
 -- Resize windows with arrows ------------------------------------------------
 map("n", "<C-Up>", "<cmd>resize +2<cr>", { desc = "Increase height" })
@@ -85,6 +109,26 @@ map("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, { desc = "Next
 map("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, { desc = "Prev diagnostic" })
 map("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 
--- Terminal mode: get back to normal mode -------------------------------------
+-- Terminal mode --------------------------------------------------------------
 map("t", "<C-/>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 map("t", "<C-_>", "<C-\\><C-n>", { desc = "Exit terminal mode (tmux)" })
+
+-- Move straight out of a terminal into an adjacent split, without having to
+-- leave terminal mode first.
+map("t", "<C-h>", "<C-\\><C-n><C-w>h", { desc = "Window left" })
+map("t", "<C-j>", "<C-\\><C-n><C-w>j", { desc = "Window down" })
+map("t", "<C-k>", "<C-\\><C-n><C-w>k", { desc = "Window up" })
+map("t", "<C-l>", "<C-\\><C-n><C-w>l", { desc = "Window right" })
+
+-- Close-with-q for the read-only windows that otherwise strand you ----------
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = {
+    "help", "man", "qf", "checkhealth", "lspinfo", "startuptime",
+    "notify", "query", "dap-float", "gitsigns-blame", "fugitive",
+  },
+  callback = function(ev)
+    vim.bo[ev.buf].buflisted = false
+    vim.keymap.set("n", "q", "<cmd>close<cr>",
+      { buffer = ev.buf, silent = true, nowait = true, desc = "Close this window" })
+  end,
+})

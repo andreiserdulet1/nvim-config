@@ -27,6 +27,8 @@ return {
         "dockerfile-language-server",
         "bash-language-server",
         "shfmt",
+        -- Debugging (see plugins/debug.lua)
+        "js-debug-adapter",
         -- Editing this config
         "lua-language-server",
         "stylua",

@@ -60,6 +60,40 @@ return {
         end,
         desc = "Terminal at project root",
       },
+      -- Switching between terminals
+      { "<leader>tl", "<cmd>TermSelect<cr>", desc = "List / switch terminals" },
+      { "<leader>t1", "<cmd>1ToggleTerm<cr>", desc = "Terminal 1" },
+      { "<leader>t2", "<cmd>2ToggleTerm<cr>", desc = "Terminal 2" },
+      { "<leader>t3", "<cmd>3ToggleTerm<cr>", desc = "Terminal 3" },
+      {
+        "<leader>tx",
+        function()
+          -- Close the terminal you're looking at, whether you're inside it or
+          -- it's just the last one you opened.
+          local terms = require("toggleterm.terminal")
+          local current = terms.get(terms.get_focused_id and terms.get_focused_id() or nil)
+          if not current then
+            local all = terms.get_all(true)
+            current = all[#all]
+          end
+          if current then
+            current:shutdown()
+          else
+            vim.notify("No terminal open")
+          end
+        end,
+        desc = "Close this terminal",
+      },
+      {
+        "<leader>tX",
+        function()
+          local all = require("toggleterm.terminal").get_all(true)
+          if #all == 0 then vim.notify("No terminals open") return end
+          for _, t in ipairs(all) do t:shutdown() end
+          vim.notify("Closed " .. #all .. " terminal(s)")
+        end,
+        desc = "Close all terminals",
+      },
       {
         "<leader>tc",
         function()

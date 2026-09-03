@@ -89,6 +89,21 @@ local function any_sibling_exists(dir, stem, except)
   return false
 end
 
+--- Path of a sibling file, without opening it. Returns nil when it doesn't
+--- exist, or when this isn't a component-shaped file at all. Used by the test
+--- runner in config/scripts.lua so that pressing the test key inside a template
+--- tests the component the template belongs to.
+---@param kind string one of "ts", "html", "style", "spec"
+---@param path string|nil defaults to the current buffer
+function M.sibling_path(kind, path)
+  path = path or vim.api.nvim_buf_get_name(0)
+  if path == "" then return nil end
+  local dir, stem, current = classify(path)
+  if not dir then return nil end
+  if kind == current then return path end
+  return resolve(dir, stem, kind)
+end
+
 --- Open a specific sibling of the current component.
 function M.open(kind)
   local path = vim.api.nvim_buf_get_name(0)
