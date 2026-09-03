@@ -89,6 +89,36 @@ prefills the word under the cursor, `<Space>sf` limits it to the current file, a
 in visual mode `<Space>sr` prefills the selection. Build output is excluded, so a
 replace can't rewrite `node_modules` or `dist`.
 
+### GitHub Actions
+
+You have 27 workflow files across 8 repos (alongside 27 Jenkinsfiles, which none
+of this touches).
+
+| Key | Does |
+|---|---|
+| `<Space>Al` | list runs, then pick one to inspect, watch, re-run or open |
+| `<Space>Ao` | logs of the latest run, in a read-only buffer you can search |
+| `<Space>Af` | failed steps only |
+| `<Space>Aw` | watch the running workflow live |
+| `<Space>Ar` | re-run the failed jobs |
+| `<Space>Ad` | dispatch a workflow |
+
+**Dispatch always confirms, and prod has to be typed.** `deploy.yml` and
+`rollback.yml` take an `environment` input whose options include `prod`, so a
+keybind here can reach production. Choosing any non-prod value shows a summary and
+waits for `y`; choosing prod makes you type the word `prod` before anything is
+sent. There is no single-keypress path to a deploy.
+
+Inputs come from the workflow's own `workflow_dispatch.inputs`, so choice inputs
+offer exactly the options the yaml declares and string inputs prompt with their
+description. The ref defaults to your current branch, and the summary shows it —
+worth reading, since deploying `prod` from a feature branch is possible and the
+summary is the only thing that tells you.
+
+**One thing you need to do:** your `gh` token has no `workflow` scope, so
+dispatching will fail until you run `gh auth refresh -s workflow`. Listing,
+logs and watching all work without it.
+
 ### Pull requests
 
 `<Space>pl` lists this repo's PRs, `<Space>pp` opens the one for your branch,

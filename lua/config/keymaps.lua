@@ -54,6 +54,20 @@ map("n", "<leader>uc", function()
   vim.notify("Colour swatches: " .. (on and "off" or "on"))
 end, { desc = "Toggle colour swatches" })
 
+-- GitHub Actions -----------------------------------------------------------
+-- Reading runs is unguarded; dispatching always confirms, and anything aimed
+-- at prod has to be typed out. See lua/config/actions.lua.
+local acts = function(fn, ...)
+  local args = { ... }
+  return function() require("config.actions")[fn](unpack(args)) end
+end
+map("n", "<leader>Al", acts("list"), { desc = "Workflow runs" })
+map("n", "<leader>Ao", acts("logs"), { desc = "Logs of the latest run" })
+map("n", "<leader>Af", acts("logs", nil, true), { desc = "Failed steps of the latest run" })
+map("n", "<leader>Aw", acts("watch"), { desc = "Watch the running workflow" })
+map("n", "<leader>Ar", acts("rerun"), { desc = "Re-run failed jobs" })
+map("n", "<leader>Ad", acts("dispatch"), { desc = "Dispatch a workflow (confirms)" })
+
 -- Angular CLI ---------------------------------------------------------------
 -- <leader>ng is a prefix only, never a leaf: a key that is both an action and
 -- a prefix makes you wait out the timeout every time you use the action.

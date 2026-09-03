@@ -161,6 +161,7 @@ return {
         { "<leader>m", group = "multi-cursor" },
         { "<leader>s", group = "search / replace" },
         { "<leader>p", group = "pull requests" },
+        { "<leader>A", group = "github actions" },
         { "<leader>q", group = "session / quit" },
         { "<leader>w", group = "window" },
       },

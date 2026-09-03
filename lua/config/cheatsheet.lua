@@ -125,6 +125,18 @@ M.sections = {
     },
   },
   {
+    "GITHUB ACTIONS",
+    {
+      { "<leader>Al", "Workflow runs (pick one, then act on it)" },
+      { "<leader>Ao", "Logs of the latest run" },
+      { "<leader>Af", "Failed steps only" },
+      { "<leader>Aw", "Watch the running workflow live" },
+      { "<leader>Ar", "Re-run the failed jobs" },
+      { "<leader>Ad", "Dispatch a workflow — always confirms;" },
+      { "", "anything targeting prod must be typed out" },
+    },
+  },
+  {
     "PULL REQUESTS",
     {
       { "<leader>pl", "PRs in this repo" },
