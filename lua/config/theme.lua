@@ -21,12 +21,12 @@ local M = {}
 
 ---@type ThemeFamily[]
 M.families = {
-  { dark = "tokyonight",       light = "tokyonight",       plugin = "tokyonight.nvim",   by_background = true },
-  { dark = "catppuccin-mocha", light = "catppuccin-latte", plugin = "catppuccin" },
-  { dark = "rose-pine-main",   light = "rose-pine-dawn",   plugin = "rose-pine" },
-  { dark = "kanagawa-wave",    light = "kanagawa-lotus",   plugin = "kanagawa.nvim" },
-  { dark = "cyberdream",       light = "cyberdream",       plugin = "cyberdream.nvim",   by_background = true },
+  -- graphite ships in this repo (colors/graphite.lua), so it needs no plugin.
+  { dark = "graphite",   light = "graphite",   by_background = true },
+  { dark = "tokyonight", light = "tokyonight", plugin = "tokyonight.nvim", by_background = true },
 }
+
+M.default = "graphite"
 
 -- What we last applied. `vim.g.colors_name` cannot be trusted for this: apply
 -- "tokyonight" and it reports "tokyonight-night"; apply "rose-pine-main" and it
@@ -103,12 +103,12 @@ end
 --- Restore whatever was saved, falling back to tokyonight dark.
 function M.restore()
   local scheme, bg = M.load_saved()
-  M.apply(scheme or "tokyonight", bg or "dark")
+  M.apply(scheme or M.default, bg or "dark")
 end
 
 --- Flip between the light and dark side of the current family.
 function M.toggle_background()
-  local current = M.current or vim.g.colors_name or "tokyonight"
+  local current = M.current or vim.g.colors_name or M.default
   local family, which = M.family_of(current)
 
   if not family then

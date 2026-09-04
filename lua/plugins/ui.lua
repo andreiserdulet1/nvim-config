@@ -110,51 +110,12 @@ return {
       require("tokyonight").setup(opts)
       -- Apply whichever theme was saved. tokyonight is the fallback, and it is
       -- loaded eagerly so there is never a flash of an unstyled screen.
-      require("config.theme").apply(
-        vim.g.nvim_theme_colorscheme or "tokyonight",
+      local theme = require("config.theme")
+      theme.apply(
+        vim.g.nvim_theme_colorscheme or theme.default,
         vim.g.nvim_theme_background or "dark"
       )
     end,
-  },
-
-  -- Alternative colorschemes ------------------------------------------------
-  -- tokyonight above stays the DEFAULT, because the web guide's palette was
-  -- hand-derived from it and the two match.
-  --
-  -- These are deliberately NOT lazy. A lazy colorscheme plugin keeps its
-  -- colors/ directory off the runtime path, so the variants are invisible to
-  -- `:colorscheme` completion and to Telescope's picker -- measured: with them
-  -- lazy, all seven variants were missing from the list. Loading them eagerly
-  -- costs about 6-7 ms of startup (28-32 ms -> 35-36 ms, six samples each) and
-  -- makes the picker and its live preview actually work.
-  --
-  -- Note Neovim 0.12 ships its own basic `catppuccin` in its runtime colors;
-  -- this plugin shadows it and is the one with real plugin integrations.
-  {
-    "catppuccin/nvim",
-    name = "catppuccin",
-    lazy = false,
-    priority = 1000,
-    opts = { flavour = "auto", background = { light = "latte", dark = "mocha" } },
-  },
-  {
-    "rose-pine/neovim",
-    name = "rose-pine",
-    lazy = false,
-    priority = 1000,
-    opts = { variant = "auto", dark_variant = "main" },
-  },
-  {
-    "rebelot/kanagawa.nvim",
-    lazy = false,
-    priority = 1000,
-    opts = { background = { light = "lotus", dark = "wave" } },
-  },
-  {
-    "scottmckendry/cyberdream.nvim",
-    lazy = false,
-    priority = 1000,
-    opts = { variant = "auto" },
   },
 
   { "nvim-tree/nvim-web-devicons", lazy = true },
@@ -197,6 +158,32 @@ return {
         lualine_z = { "location" },
       },
     },
+    config = function(_, opts)
+      -- lualine's "auto" theme is unreadable against graphite: measured
+      -- 3.34:1 on the mode block and 3.19:1 beside it, both under the 4.5:1
+      -- floor. Use graphite's own table when graphite is active, and let
+      -- "auto" handle anything else.
+      local function resolve()
+        if vim.g.colors_name == "graphite" then
+          local ok, m = pcall(require, "graphite.lualine")
+          -- get() returns a plain table; a lazy metatable version produced an
+          -- empty statusline because LuaJIT has no __pairs.
+          if ok then return m.get() end
+        end
+        return "auto"
+      end
+
+      opts.options.theme = resolve()
+      require("lualine").setup(opts)
+
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("graphite_lualine", { clear = true }),
+        callback = function()
+          opts.options.theme = resolve()
+          require("lualine").setup(opts)
+        end,
+      })
+    end,
   },
 
   -- Buffer tabs along the top ----------------------------------------------

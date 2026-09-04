@@ -105,28 +105,42 @@ Learn these first; everything else is discoverable by pressing `<Space>` and wai
 
 ### Themes
 
-`<Space>uT` picks a theme with a live preview; `<Space>ut` flips the current one
-between light and dark. Both choices are remembered next time you start.
+`<Space>uT` picks a theme with a live preview; `<Space>ut` flips light/dark. Both
+choices are remembered next time you start.
 
-| Theme | Dark | Light |
-|---|---|---|
-| tokyonight *(default)* | `tokyonight` | `tokyonight` |
-| catppuccin | `catppuccin-mocha` | `catppuccin-latte` |
-| rose-pine | `rose-pine-main` | `rose-pine-dawn` |
-| kanagawa | `kanagawa-wave` | `kanagawa-lotus` |
-| cyberdream | `cyberdream` | `cyberdream` |
+| Theme | Variants |
+|---|---|
+| **graphite** *(default)* | dark / light |
+| tokyonight | dark / light |
 
-tokyonight is the default because the web guide's colours were hand-derived from
-it, so the editor and the page match. Switch to another and they simply diverge —
-cosmetic, nothing breaks.
+**Graphite is ours**, in `lua/graphite/` and `colors/graphite.lua` — no plugin,
+because `~/.config/nvim` is already on the runtime path. Warm neutral rather than
+the blue-greys everything else uses: amber, sage, clay, slate and ochre on a warm
+grey ground, with a paper-like light variant.
 
-Two implementation notes, both from measurement rather than assumption. The theme
-plugins load eagerly, not lazily: a lazy colorscheme keeps its `colors/` directory
-off the runtime path, which made all seven non-default variants invisible to
-`:colorscheme` and to the picker. Loading them costs about 6–7 ms of startup and
-makes the picker work. And the light/dark toggle tracks the name it applied rather
-than reading `vim.g.colors_name`, because that reports `tokyonight-night` when you
-asked for `tokyonight` — matching on it silently broke tokyonight's toggle.
+The hue assignment is the actual design decision, not an afterthought:
+
+| Colour | Carries |
+|---|---|
+| amber | functions and methods — what you scan a file for |
+| clay | keywords and control flow |
+| sage | strings |
+| slate | numbers, booleans, constants |
+| ochre | types, classes, interfaces |
+| plain text | variables and properties, left uncoloured to cut noise |
+
+Operators and punctuation get dim text rather than a hue of their own.
+
+**Every text colour was set against a measured contrast ratio**, and the ratio is
+recorded next to it in `lua/graphite/palette.lua`. The first draft's comment
+colours failed — 3.92:1 dark and 3.84:1 light against a 4.5:1 floor — and were
+adjusted until they passed (now 4.75:1 and 4.97:1). Line numbers are the deliberate
+exception at ~2.5:1: a gutter should be present without competing with the code.
+
+Two things needed explicit handling. lualine's `theme = "auto"` produced a
+grey-on-grey statusline against this palette (3.34:1), so `lua/graphite/lualine.lua`
+derives it properly — now 4.5:1 to 13.7:1. And the guide's palette is re-derived
+from Graphite, so the editor and the page still match.
 
 The file explorer opens on the **right** (`<Space>e`), so toggling it doesn't shift
 your code sideways.
