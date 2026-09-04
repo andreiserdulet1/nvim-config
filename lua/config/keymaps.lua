@@ -48,6 +48,29 @@ map("n", "<leader>uh", function()
   vim.notify("CSV header row: " .. (on and "off" or "line 1"))
 end, { desc = "Toggle CSV header row" })
 
+-- Angular: jump between a component's .ts / .html / .scss / .spec.ts ---------
+local component = function(kind)
+  return function() require("config.component").open(kind) end
+end
+map("n", "<leader>ot", component("ts"), { desc = "Component: TypeScript" })
+map("n", "<leader>oh", component("html"), { desc = "Component: template" })
+map("n", "<leader>os", component("style"), { desc = "Component: styles" })
+map("n", "<leader>op", component("spec"), { desc = "Component: spec" })
+map("n", "<leader>oo", function() require("config.component").cycle() end,
+  { desc = "Component: cycle files" })
+
+-- Run and test this project --------------------------------------------------
+local scripts = function(fn, ...)
+  local args = { ... }
+  return function() require("config.scripts")[fn](unpack(args)) end
+end
+map("n", "<leader>nr", scripts("pick"), { desc = "Pick a package.json script" })
+map("n", "<leader>nt", scripts("test_file"), { desc = "Test this component" })
+map("n", "<leader>na", scripts("test_all", false), { desc = "Test everything (once)" })
+map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (watch)" })
+map("n", "<leader>ns", scripts("run", "start"), { desc = "Start the dev server" })
+map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
+
 -- GitHub Actions -----------------------------------------------------------
 -- Reading runs is unguarded; dispatching always confirms, and anything aimed
 -- at prod has to be typed out. See lua/config/actions.lua.
