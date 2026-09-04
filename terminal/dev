@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+#
+# dev -- bring up a named tmux session with the editor and every long-running
+# process for a workspace, instead of opening four terminals by hand.
+#
+#   dev              list the workspaces and any running sessions
+#   dev payments     advertiser-payments-ui: serve + wiremock
+#   dev shell        nova/shell-ui + advertiser-payments-ui + wiremock
+#
+# Sessions are persistent: Ctrl-b d detaches and leaves the servers running,
+# and `dev <name>` again reattaches. Running it twice never duplicates windows.
+#
+# DEV_DRY_RUN=1 prints what it would do without touching tmux.
+
+set -euo pipefail
+
+PROJECTS="$HOME/projects"
+
+# Both repos' `yarn start` scripts end in `-o`, which opens a browser tab on
+# every launch -- two tabs in the `shell` workspace. Setting this to 1 appends
+# --no-open. It is off by default because it has NOT been verified that a later
+# --no-open overrides the earlier -o, and a wrong guess here would mean a dev
+# server that silently does not serve. Try it manually first:
+#     cd ~/projects/advertiser-payments-ui && yarn start --no-open
+NO_OPEN="${DEV_NO_OPEN:-0}"
+
+start_cmd() {
+  if [[ "$NO_OPEN" == "1" ]]; then
+    echo "yarn start --no-open"
+  else
+    echo "yarn start"
+  fi
+}
+
+die() { printf '%s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+usage: dev <workspace>
+
+  payments   advertiser-payments-ui
+               0:editor    nvim
+               1:serve     yarn start
+               2:wiremock  yarn wiremock   (java, port 8081)
+
+  shell      payments inside the host shell
+               0:editor    nvim   (advertiser-payments-ui)
+               1:shell     yarn start   (nova/shell-ui)
+               2:payments  yarn start   (advertiser-payments-ui)
+               3:wiremock  yarn wiremock
+
+Ctrl-b d detaches and leaves everything running. Ctrl-b <n> jumps to a window.
+Ctrl-b s switches between sessions.
+EOF
+  if [[ -z "${DEV_DRY_RUN:-}" ]] && tmux ls >/dev/null 2>&1; then
+    echo
+    echo "running sessions:"
+    tmux ls | sed 's/^/  /'
+  fi
+}
+
+# Create a window running a command. Deliberately opens a shell and *sends* the
+# command rather than `new-window 'cmd'`:
+#   - a shell means direnv fires, so each repo's .envrc loads
+#   - if the process dies you keep a usable shell in that window instead of it
+#     vanishing
+win() {
+  local session=$1 index=$2 name=$3 dir=$4 cmd=$5
+
+  [[ -d "$dir" ]] || die "dev: no such directory: $dir"
+
+  if [[ -n "${DEV_DRY_RUN:-}" ]]; then
+    printf '  %s:%s  %-9s %-46s %s\n' "$session" "$index" "$name" "$cmd" "~${dir#"$HOME"}"
+    return
+  fi
+
+  if [[ "$index" == "0" ]]; then
+    tmux new-session -d -s "$session" -n "$name" -c "$dir"
+  else
+    tmux new-window -t "$session:$index" -n "$name" -c "$dir"
+  fi
+  tmux send-keys -t "$session:$index" "$cmd" C-m
+}
+
+build() {
+  local ws=$1
+  case "$ws" in
+    payments)
+      local p="$PROJECTS/advertiser-payments-ui"
+      win payments 0 editor   "$p" "nvim"
+      win payments 1 serve    "$p" "$(start_cmd)"
+      win payments 2 wiremock "$p" "yarn wiremock"
+      ;;
+    shell)
+      # This mirrors the process set you actually run: shell-ui serves the host
+      # and owns the wiremock stubs (docker/wiremock/stubs/run-wiremock.sh),
+      # while advertiser-payments-ui serves the payments remote. Note the
+      # wiremock here is shell-ui's, NOT payments' -- they are different mocks
+      # and payments' own (backend-mock/wm-up) is only used standalone.
+      local p="$PROJECTS/advertiser-payments-ui"
+      local s="$PROJECTS/nova/shell-ui"
+      win shell 0 editor   "$p" "nvim"
+      win shell 1 shell    "$s" "$(start_cmd)"
+      win shell 2 wiremock "$s" "yarn wiremock"
+      win shell 3 payments "$p" "$(start_cmd)"
+      ;;
+    *)
+      usage >&2
+      die "dev: unknown workspace '$ws'"
+      ;;
+  esac
+}
+
+main() {
+  [[ $# -ge 1 ]] || { usage; exit 0; }
+  local ws=$1
+
+  if [[ -n "${DEV_DRY_RUN:-}" ]]; then
+    echo "dry run -- workspace '$ws' would create:"
+    build "$ws"
+    return
+  fi
+
+  command -v tmux >/dev/null || die "dev: tmux is not installed"
+
+  if tmux has-session -t "$ws" 2>/dev/null; then
+    echo "attaching to existing session '$ws'"
+  else
+    build "$ws"
+    tmux select-window -t "$ws:0"
+  fi
+
+  # Inside tmux, `attach` fails, so switch the current client instead. That in
+  # turn needs an attached client -- true whenever $TMUX is set from a real
+  # pane, but not in odd cases like a detached `tmux send-keys`. Fall back
+  # rather than exiting with tmux's bare "no current client".
+  if [[ -n "${TMUX:-}" ]]; then
+    tmux switch-client -t "$ws" 2>/dev/null || tmux attach-session -t "$ws"
+  else
+    tmux attach-session -t "$ws"
+  fi
+}
+
+main "$@"

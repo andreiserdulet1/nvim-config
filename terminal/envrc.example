@@ -1,0 +1,15 @@
+# Template for a per-project .envrc, loaded by direnv when you cd in.
+#
+# Copy to a project root as `.envrc`, then run `direnv allow`. Real .envrc files
+# are ignored globally via terminal/git-ignore, so they cannot be committed.
+#
+#   cp ~/.config/nvim/terminal/envrc.example ~/projects/<repo>/.envrc
+
+# Load the repo's own dotenv file if it has one.
+dotenv_if_exists .env
+
+# advertiser-payments-ui's Playwright suite logs in to shared staging for real
+# and needs these two. Fill in your own values -- never commit them.
+#
+# export STAGING_USER=
+# export STAGING_PASSWORD=

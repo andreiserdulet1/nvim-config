@@ -13,10 +13,17 @@ Press `<Space>?` inside Neovim at any time for the keymap cheatsheet.
 ## Setting this up on a new machine
 
 ```
-brew bundle --file=~/.config/nvim/Brewfile
 git clone git@github.com:andreiserdulet1/nvim-config.git ~/.config/nvim
+brew bundle --file=~/.config/nvim/Brewfile
+~/.config/nvim/terminal/install.sh
 nvim
 ```
+
+`install.sh` symlinks the tmux config, the `dev` session launcher, the starship
+prompt and the global gitignore into place. It backs up anything already there and
+**refuses** to overwrite a file you have edited locally, showing the diff instead.
+It never touches `~/.zshrc` — that file has machine-specific things in it, so the
+lines it needs are recorded in `terminal/zshrc.snippet` and only checked for.
 
 First launch installs 48 plugins and downloads language servers; give it a couple
 of minutes and watch the bottom of the screen. Then run **`:checkhealth nvim-config`** —

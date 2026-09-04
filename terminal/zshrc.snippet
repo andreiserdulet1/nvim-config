@@ -1,0 +1,28 @@
+# Lines ~/.zshrc needs for this setup. NOT applied automatically -- install.sh
+# only checks for them, because .zshrc also holds machine-specific things
+# (aws-login with a username in it, sdkman, PATH entries) that should not be
+# overwritten by a shared file.
+#
+# Order matters where noted.
+
+# Neovim as the editor for git commit, lazygit, etc.
+export EDITOR="nvim"
+export VISUAL="nvim"
+
+# `dev` lives in ~/.local/bin
+export PATH="$HOME/.local/bin:$PATH"
+
+# Prompt. Only ONE prompt may initialise -- whichever runs last wins, and an
+# earlier one is pure wasted startup. oh-my-posh was removed for exactly this
+# reason: it ran first and starship overrode it on every shell.
+eval "$(starship init zsh)"
+
+eval "$(zoxide init zsh)"
+source <(fzf --zsh)
+
+source $(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# direnv must be initialised AFTER starship: its hook wraps the prompt command
+# that starship installs.
+eval "$(direnv hook zsh)"

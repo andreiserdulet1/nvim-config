@@ -1,0 +1,63 @@
+# starship configuration
+#
+# Deliberately does NOT set `format`. Starship's default is `$all`, which already
+# includes custom modules, so the prompt keeps exactly the look it had before this
+# file existed and only gains the segments below.
+#
+# Deleting this file is the complete undo -- there was no starship.toml before it.
+#
+# Two segments were considered and dropped after checking this machine:
+#   * aws       -- AWS_PROFILE / AWS_REGION are never set (aws-login runs in a child
+#                  process) and there is no ~/.aws/config, so it would always be empty.
+#   * terraform -- the workspace comes from .terraform/environment, and there are no
+#                  .terraform directories here; terragrunt runs in Docker.
+#
+# Two implementation notes, both found by testing rather than assumption:
+#
+#   1. The `when` key is IGNORED by starship 1.26.0 -- a module with `when = "false"`
+#      still renders. So each command below filters itself with `case` instead of
+#      relying on a separate condition.
+#   2. Every `format` wraps its content in a `(...)` group. That makes starship drop
+#      the whole segment, symbol and all, when the command produces no output.
+#      Without it you get a bare symbol with nothing after it.
+
+# --- Angular version -------------------------------------------------------
+# These repos span Angular 18, 19 and 21, and which one you are in changes what is
+# valid. Reads the version from the project's own package.json.
+#
+# detect_files inspects the CURRENT directory only, not ancestors, so this shows at
+# a repo root and not deep inside src/app. The built-in nodejs module has exactly
+# the same limitation.
+[custom.angular]
+description = "Angular version from this project's package.json"
+detect_files = ["angular.json"]
+command = '''jq -r '.dependencies["@angular/core"] // empty' package.json'''
+symbol = "ng "
+style = "bold red"
+format = "(via [$symbol$output ]($style))"
+
+# --- Terragrunt target -----------------------------------------------------
+# The infra repos are laid out accounts/<env>/<region>/<module>, so the target
+# environment and region are already in the path and need no state file. This is
+# the "what am I about to apply against" signal a terraform workspace would give.
+#
+# Split in two so production looks different. Each command emits nothing unless the
+# path matches, and the conditional format then hides the segment entirely.
+# Guarded on an .hcl file in the current directory (terragrunt.hcl in module dirs,
+# region.hcl in region dirs) so the command runs only inside infra directories.
+
+[custom.terragrunt_prod]
+description = "Terragrunt target, production only"
+detect_extensions = ["hcl"]
+command = '''case "$PWD" in */accounts/prod/*) printf '%s' "$PWD" | sed -nE 's|.*/accounts/([^/]+)/([^/]+).*|\1/\2|p' ;; esac'''
+symbol = "⏣ "
+style = "bold red"
+format = "(via [$symbol$output ]($style))"
+
+[custom.terragrunt]
+description = "Terragrunt target, non-production"
+detect_extensions = ["hcl"]
+command = '''case "$PWD" in */accounts/prod/*) ;; */accounts/*) printf '%s' "$PWD" | sed -nE 's|.*/accounts/([^/]+)/([^/]+).*|\1/\2|p' ;; esac'''
+symbol = "⏣ "
+style = "bold yellow"
+format = "(via [$symbol$output ]($style))"
