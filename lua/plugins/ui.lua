@@ -106,15 +106,55 @@ return {
       end,
     },
     config = function(_, opts)
-      -- Default to the dark palette; <leader>ut swaps to light.
-      if vim.g.nvim_theme_background then
-        vim.o.background = vim.g.nvim_theme_background
-      else
-        vim.o.background = "dark"
-      end
+      vim.o.background = vim.g.nvim_theme_background or "dark"
       require("tokyonight").setup(opts)
-      vim.cmd.colorscheme("tokyonight")
+      -- Apply whichever theme was saved. tokyonight is the fallback, and it is
+      -- loaded eagerly so there is never a flash of an unstyled screen.
+      require("config.theme").apply(
+        vim.g.nvim_theme_colorscheme or "tokyonight",
+        vim.g.nvim_theme_background or "dark"
+      )
     end,
+  },
+
+  -- Alternative colorschemes ------------------------------------------------
+  -- tokyonight above stays the DEFAULT, because the web guide's palette was
+  -- hand-derived from it and the two match.
+  --
+  -- These are deliberately NOT lazy. A lazy colorscheme plugin keeps its
+  -- colors/ directory off the runtime path, so the variants are invisible to
+  -- `:colorscheme` completion and to Telescope's picker -- measured: with them
+  -- lazy, all seven variants were missing from the list. Loading them eagerly
+  -- costs about 6-7 ms of startup (28-32 ms -> 35-36 ms, six samples each) and
+  -- makes the picker and its live preview actually work.
+  --
+  -- Note Neovim 0.12 ships its own basic `catppuccin` in its runtime colors;
+  -- this plugin shadows it and is the one with real plugin integrations.
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    lazy = false,
+    priority = 1000,
+    opts = { flavour = "auto", background = { light = "latte", dark = "mocha" } },
+  },
+  {
+    "rose-pine/neovim",
+    name = "rose-pine",
+    lazy = false,
+    priority = 1000,
+    opts = { variant = "auto", dark_variant = "main" },
+  },
+  {
+    "rebelot/kanagawa.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = { background = { light = "lotus", dark = "wave" } },
+  },
+  {
+    "scottmckendry/cyberdream.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = { variant = "auto" },
   },
 
   { "nvim-tree/nvim-web-devicons", lazy = true },
@@ -125,7 +165,7 @@ return {
     event = "VeryLazy",
     opts = {
       options = {
-        theme = "tokyonight",
+        theme = "auto",   -- follow whatever colorscheme is active
         globalstatus = true,
         section_separators = { left = "", right = "" },
         component_separators = { left = "", right = "" },
@@ -178,10 +218,9 @@ return {
         always_show_bufferline = true,
         show_buffer_close_icons = true,
         separator_style = "slant",
-        -- Keep the file tree in its own column instead of overlapping tabs.
-        offsets = {
-          { filetype = "neo-tree", text = "Explorer", highlight = "Directory", separator = true },
-        },
+        -- No neo-tree offset: bufferline offsets only reserve space on the LEFT
+        -- edge, and the tree now opens on the right. Leaving it in would indent
+        -- the tab bar on the side the tree is not on.
         -- Angular projects are full of same-named files (component.ts in every
         -- folder), so show enough path to tell them apart.
         name_formatter = function(buf)

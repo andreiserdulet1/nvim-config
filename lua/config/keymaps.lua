@@ -11,39 +11,14 @@ map("n", "<leader>gu", function()
   vim.ui.open("https://claude.ai/code/artifact/fa81e147-7724-4e98-9a71-0a9f36c71547")
 end, { desc = "Open the web guide" })
 
--- Light / dark, matching the two palettes in the web guide. The choice is
--- written to a small file so it survives restarting Neovim.
-local theme_file = vim.fn.stdpath("data") .. "/theme-background"
-map("n", "<leader>ut", function()
-  local next_bg = vim.o.background == "dark" and "light" or "dark"
-  vim.o.background = next_bg
-  vim.cmd.colorscheme("tokyonight")
-  pcall(vim.fn.writefile, { next_bg }, theme_file)
-  vim.notify("Theme: " .. next_bg)
-end, { desc = "Toggle light/dark theme" })
-
--- Angular: jump between a component's .ts / .html / .scss / .spec.ts ---------
-local component = function(kind)
-  return function() require("config.component").open(kind) end
-end
-map("n", "<leader>ot", component("ts"), { desc = "Component: TypeScript" })
-map("n", "<leader>oh", component("html"), { desc = "Component: template" })
-map("n", "<leader>os", component("style"), { desc = "Component: styles" })
-map("n", "<leader>op", component("spec"), { desc = "Component: spec" })
-map("n", "<leader>oo", function() require("config.component").cycle() end,
-  { desc = "Component: cycle files" })
-
--- Run and test this project --------------------------------------------------
-local scripts = function(fn, ...)
-  local args = { ... }
-  return function() require("config.scripts")[fn](unpack(args)) end
-end
-map("n", "<leader>nr", scripts("pick"), { desc = "Pick a package.json script" })
-map("n", "<leader>nt", scripts("test_file"), { desc = "Test this component" })
-map("n", "<leader>na", scripts("test_all", false), { desc = "Test everything (once)" })
-map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (watch)" })
-map("n", "<leader>ns", scripts("run", "start"), { desc = "Start the dev server" })
-map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
+-- Themes. <leader>ut flips light/dark within the current family; <leader>uT
+-- picks any of them with a live preview. Both persist across restarts.
+-- See lua/config/theme.lua for why the two mechanisms differ.
+map("n", "<leader>ut", function() require("config.theme").toggle_background() end,
+  { desc = "Toggle light / dark" })
+map("n", "<leader>uT", function()
+  require("telescope.builtin").colorscheme({ enable_preview = true })
+end, { desc = "Pick a colourscheme" })
 
 -- Colour swatches in CSS/SCSS are native in Neovim 0.12: cssls advertises
 -- colorProvider and vim.lsp.document_color renders the swatches, on by

@@ -10,12 +10,15 @@
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
--- Remember the light/dark choice made with <leader>ut.
-local theme_file = vim.fn.stdpath("data") .. "/theme-background"
-if vim.fn.filereadable(theme_file) == 1 then
-  local saved = (vim.fn.readfile(theme_file)[1] or ""):gsub("%s", "")
-  if saved == "light" or saved == "dark" then
-    vim.g.nvim_theme_background = saved
+-- Remember the colourscheme and light/dark choice. Read before lazy.nvim
+-- starts so the theme can be applied without a flash of the wrong palette.
+-- config/theme.lua also understands the older file that held only light/dark.
+do
+  local ok, theme = pcall(require, "config.theme")
+  if ok then
+    local scheme, bg = theme.load_saved()
+    vim.g.nvim_theme_colorscheme = scheme
+    vim.g.nvim_theme_background = bg
   end
 end
 

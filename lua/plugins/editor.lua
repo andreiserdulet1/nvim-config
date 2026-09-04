@@ -96,6 +96,9 @@ return {
         },
       },
       window = {
+        -- On the right, so the tree opens away from the line numbers and the
+        -- code does not shift sideways when you toggle it.
+        position = "right",
         width = 34,
         mappings = {
           ["<space>"] = "none",   -- keep <space> as leader inside the tree

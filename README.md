@@ -103,8 +103,33 @@ Learn these first; everything else is discoverable by pressing `<Space>` and wai
 | `<Space>ac` | Claude |
 | `<Space>?` | The full cheatsheet |
 
-`<Space>ut` switches between the light and dark palette; the choice is remembered
-next time you start. Both match the web guide exactly.
+### Themes
+
+`<Space>uT` picks a theme with a live preview; `<Space>ut` flips the current one
+between light and dark. Both choices are remembered next time you start.
+
+| Theme | Dark | Light |
+|---|---|---|
+| tokyonight *(default)* | `tokyonight` | `tokyonight` |
+| catppuccin | `catppuccin-mocha` | `catppuccin-latte` |
+| rose-pine | `rose-pine-main` | `rose-pine-dawn` |
+| kanagawa | `kanagawa-wave` | `kanagawa-lotus` |
+| cyberdream | `cyberdream` | `cyberdream` |
+
+tokyonight is the default because the web guide's colours were hand-derived from
+it, so the editor and the page match. Switch to another and they simply diverge —
+cosmetic, nothing breaks.
+
+Two implementation notes, both from measurement rather than assumption. The theme
+plugins load eagerly, not lazily: a lazy colorscheme keeps its `colors/` directory
+off the runtime path, which made all seven non-default variants invisible to
+`:colorscheme` and to the picker. Loading them costs about 6–7 ms of startup and
+makes the picker work. And the light/dark toggle tracks the name it applied rather
+than reading `vim.g.colors_name`, because that reports `tokyonight-night` when you
+asked for `tokyonight` — matching on it silently broke tokyonight's toggle.
+
+The file explorer opens on the **right** (`<Space>e`), so toggling it doesn't shift
+your code sideways.
 
 `<Space>` is the leader key. `which-key` shows you the menu if you pause after it,
 so you never have to memorise the rest.
