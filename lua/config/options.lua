@@ -107,3 +107,22 @@ vim.api.nvim_create_autocmd("FileType", {
     end)
   end,
 })
+
+-- Reopen a file where you left it. Neovim records the last cursor position in
+-- the `"` mark; this jumps to it. Skipped for commit and rebase buffers, where
+-- the top of the file is always what you want.
+vim.api.nvim_create_autocmd("BufReadPost", {
+  callback = function(ev)
+    local exclude = { gitcommit = true, gitrebase = true, gitconfig = true }
+    if exclude[vim.bo[ev.buf].filetype] or vim.b[ev.buf].last_pos_restored then
+      return
+    end
+    vim.b[ev.buf].last_pos_restored = true
+    local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
+    local line_count = vim.api.nvim_buf_line_count(ev.buf)
+    if mark[1] > 0 and mark[1] <= line_count then
+      pcall(vim.api.nvim_win_set_cursor, 0, mark)
+      vim.cmd("normal! zz")
+    end
+  end,
+})

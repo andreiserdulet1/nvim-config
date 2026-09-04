@@ -286,6 +286,7 @@ return {
             { icon = " ", key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
             { icon = " ", key = "p", desc = "Projects", action = ":lua require('config.projects').pick()" },
             { icon = " ", key = "?", desc = "Cheatsheet", action = ":lua require('config.cheatsheet').open()" },
+            { icon = " ", key = "t", desc = "Learn vim (:Tutor)", action = ":Tutor" },
             { icon = "󰒲 ", key = "l", desc = "Plugins", action = ":Lazy" },
             { icon = " ", key = "q", desc = "Quit", action = ":qa" },
           },

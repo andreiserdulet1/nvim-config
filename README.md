@@ -10,6 +10,51 @@ Press `<Space>?` inside Neovim at any time for the keymap cheatsheet.
 
 ---
 
+## Setting this up on a new machine
+
+```
+brew bundle --file=~/.config/nvim/Brewfile
+git clone git@github.com:andreiserdulet1/nvim-config.git ~/.config/nvim
+nvim
+```
+
+First launch installs 48 plugins and downloads language servers; give it a couple
+of minutes and watch the bottom of the screen. Then run **`:checkhealth nvim-config`** —
+it lists every command-line tool this config drives, what depends on each one, and
+the exact command to install anything missing.
+
+Language servers, linters and debug adapters are **not** in the Brewfile; Mason
+installs those. Note that `brew bundle check` also reports merely *outdated*
+formulae as unsatisfied, so don't read that as broken.
+
+## Your first fifteen minutes
+
+If you've never used vim, spend thirty minutes on **`:Tutor`** first — it ships with
+Neovim and it's on the start screen. Nothing below will make sense without it.
+
+Then, in order:
+
+1. **Press `<Space>` and wait.** A menu appears showing every key that can follow.
+   This is the one habit worth forming; you never need to memorise this file.
+2. **`<Space><Space>`** to open a file, **`<Space>fg`** to search across the project.
+   Those two cover most navigation.
+3. **`gd`** jumps to a definition, **`<C-o>`** comes back. Treat them as browser
+   forward and back.
+4. **`<Space>gg`** for git. Everything else in git can wait.
+5. **`<Space>?`** is the cheatsheet whenever you're stuck.
+
+Ignore for now: debugging, GitHub Actions, the Angular CLI keys, multi-cursor.
+They're documented below when you want them.
+
+Two things that will save you: **`<Space>uu`** shows your undo history as a tree, so
+nothing is ever really lost, and reopening a file puts you back where you were.
+
+Hardtime is on by default and will nag when you hold `j` or reach for the arrow
+keys — that's deliberate, it teaches better motions. **`<Space>uH`** turns it off if
+you'd rather not. **`<Space>up`** turns on motion hints while you're learning.
+
+---
+
 ## 1. Layout
 
 ```
