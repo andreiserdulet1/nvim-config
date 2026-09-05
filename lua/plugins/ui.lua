@@ -15,6 +15,11 @@ return {
     opts = {
       style = "night",
       light_style = "day",
+      -- Follow graphite, so switching schemes doesn't switch the painting off.
+      -- `styles.floats`/`sidebars` stay "normal" below on purpose: tokyonight's
+      -- transparent mode would otherwise strip float backgrounds too, and
+      -- readable popups are worth more than a painting behind a hover window.
+      transparent = vim.g.graphite_transparent or false,
       styles = {
         comments = { italic = true },
         keywords = { italic = false },

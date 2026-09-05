@@ -1,0 +1,24 @@
+# Paintings used as the Neovim background. Tab-separated, three columns:
+#
+#   slug  <TAB>  source file  <TAB>  label shown in the picker
+#
+# The source file is looked for in ~/Downloads first, then in the paintings
+# directory's own src/. import.sh copies it out of Downloads on first run, so
+# clearing Downloads later does not break anything.
+#
+# The attributions below were identified by eye from the images themselves, not
+# read off a museum record. The Rembrandt and the two Cuyps are certain (the
+# second Cuyp is signed in the lower right); the rest are confident but worth
+# correcting if you know better. Only this column is affected -- it is the label
+# in the picker, nothing depends on it.
+#
+# Opacity is NOT set here. import.sh measures each painting and computes it, so
+# a near-black nocturne and a near-white river scene land at the same faintness.
+ruisdael-oaks-pond	background1.jpg	Ruisdael · Oaks beside a pond
+goyen-oak-dune	background2.jpg	van Goyen · Oak on a dune
+potter-farmyard	background3.jpg	Potter · The farmyard
+goyen-river-windmill	background4.jpeg	van Goyen · River with a windmill
+rembrandt-mill	background5.jpg	Rembrandt · The Mill
+neer-moonlit-river	background6.jpg	van der Neer · Moonlit river
+cuyp-herdsmen	background7.jpeg	Cuyp · Young herdsmen with cattle
+cuyp-milkmaid	background8.jpg	Cuyp · Milkmaid by the river

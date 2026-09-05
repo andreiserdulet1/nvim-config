@@ -29,6 +29,14 @@ M.dark = {
   comment   = "#8b8274", --  4.75:1  raised from #7d7468, which failed at 3.92:1
   gutter    = "#5d5666", --  2.56:1  recessive on purpose
 
+  -- Used in place of `comment` when a background painting is showing, and only
+  -- then. A painting has to lift the ground above #17161a to be visible at all,
+  -- and `comment` has almost no room to give: it sits at 4.75:1 against a 4.5:1
+  -- floor. Measured against the lifted ground (#363436, the brightest the
+  -- painting is allowed to reach), #8b8274 falls to 3.27:1 and this holds
+  -- 4.51:1. Body text is 8.1:1 there and needs no adjustment.
+  comment_on_painting = "#a39b8f", -- 4.51:1 against #363436
+
   -- syntax accents
   amber     = "#d9a05b", --  7.83:1  functions and methods
   clay      = "#c98a7a", --  6.35:1  keywords, control flow
@@ -56,6 +64,11 @@ M.light = {
   text      = "#23201c", -- 15.18:1
   dim       = "#4a453e", --  8.88:1
   comment   = "#736a5e", --  4.97:1  darkened from #857c70, which failed at 3.84:1
+  -- The light side of the same problem: a painting darkens the paper ground
+  -- rather than lifting it, so the comment colour has to darken to keep up.
+  -- Against #d8d5d0 (the darkest the painting may reach) #736a5e falls to
+  -- 3.62:1 and this holds 4.50:1; body text is 11.0:1 and is left alone.
+  comment_on_painting = "#635c51", -- 4.50:1 against #d8d5d0
   gutter    = "#aca291", --  2.36:1  recessive on purpose
 
   amber     = "#8a5a1e", --  5.52:1

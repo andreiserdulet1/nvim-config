@@ -16,6 +16,7 @@ Press `<Space>?` inside Neovim at any time for the keymap cheatsheet.
 git clone git@github.com:andreiserdulet1/nvim-config.git ~/.config/nvim
 brew bundle --file=~/.config/nvim/Brewfile
 ~/.config/nvim/terminal/install.sh
+~/.config/nvim/terminal/paintings/import.sh  # optional, see Themes
 nvim
 ```
 
@@ -141,6 +142,90 @@ Two things needed explicit handling. lualine's `theme = "auto"` produced a
 grey-on-grey statusline against this palette (3.34:1), so `lua/graphite/lualine.lua`
 derives it properly — now 4.5:1 to 13.7:1. And the guide's palette is re-derived
 from Graphite, so the editor and the page still match.
+
+### Background paintings
+
+A Dutch Golden Age landscape sits behind the code. **`<Space>ub`** picks one, with
+a live preview as you move through the list, and remembers the choice. *Random
+each launch* and *No background* are entries in the same list.
+
+```
+brew bundle --file=~/.config/nvim/Brewfile   # for imagemagick
+~/.config/nvim/terminal/paintings/import.sh
+```
+
+The original paintings are committed in `terminal/paintings/src`, so a fresh
+clone renders without hunting them down again — they are the only binaries in
+this repo and the exception is deliberate. `import.sh` reads the files named in
+`terminal/paintings/manifest.tsv` from there. `~/Downloads` is the inbox rather
+than the store: to add a painting, drop it in Downloads, add a manifest line and
+re-run — it gets copied into `src/` ready to commit.
+
+**Neovim cannot draw a background image.** Nothing in the editor can — it paints
+character cells, not pixels. So the image comes from **iTerm2** underneath, with
+Graphite made transparent so it shows through. `lua/config/painting.lua` is only
+the switch: it sends iTerm2 an `OSC 1337` escape code on `VimEnter` and clears it
+on `VimLeavePre`, which is why your shell, lazygit and `dev` sessions stay plain.
+Nothing is emitted in any other terminal, so this is inert over SSH and headless.
+
+#### Why the paintings are tone-mapped rather than faded
+
+The obvious approach is to blend the painting over the ground colour at some low
+opacity. Measuring it killed that idea. Graphite's ground is so dark, and its
+comment colour so close to the 4.5:1 floor already, that the brightest part of a
+sky hits the limit at **2–3% opacity** — indistinguishable from no painting at
+all. The constraint is not *how much painting* but *how bright the background may
+get*, and blending spends that entire budget on a few blown-out highlights.
+
+So each painting is instead **tone-mapped into the band the theme can afford**:
+its darkest tone becomes the ground colour exactly, its brightest becomes a
+ceiling, and everything between is redistributed across that range. Same
+worst-case contrast, far more of the picture visible. It also equalises them —
+a near-black van der Neer nocturne and a near-white van Goyen river come out at
+the same weight, which is the point of having eight.
+
+The ceilings are solved, not chosen: each is the furthest the ground can travel
+toward the text colour while comment text still clears 4.5:1.
+
+| | Ground | Ceiling | Comment | |
+|---|---|---|---|---|
+| dark | `#17161a` | `#363436` | `#8b8274` → `#a39b8f` | 4.51:1 |
+| light | `#faf7f2` | `#d8d5d0` | `#736a5e` → `#635c51` | 4.50:1 |
+
+That comment shift is the price, and it is **only** paid while a painting is
+showing — `palette.lua` carries it as `comment_on_painting`, and picking *No
+background* restores the original colours along with the solid ground. Body text
+is unaffected either way (8.1:1 dark, 11.0:1 light).
+
+`import.sh` measures the ratio back off each rendered file and prints it, rather
+than trusting the arithmetic. Every render reports `ok` or `BELOW FLOOR`.
+
+Two variants exist per painting, dark and paper-light, so `<Space>ut` swaps the
+background along with the theme instead of leaving a grey rectangle behind.
+
+Floats, popups, the completion menu, the statusline and Telescope stay **opaque**
+on purpose. Those are where you most need text to be unambiguous, and a painting
+behind a hover window is just noise.
+
+| Command | |
+|---|---|
+| `:Painting` | the picker, same as `<Space>ub` |
+| `:PaintingNext` | a different painting, now |
+| `:PaintingOff` | back to solid Graphite |
+
+The *renders* stay out of the repo, in `~/.local/share/nvim/paintings` (~25MB) —
+they are derived files and `import.sh` rebuilds them in seconds. They are PNG8: quantising to a palette dithers away the contour lines a
+band this narrow would otherwise show, and costs a tenth of what adding grain to
+a truecolour PNG did.
+
+The attributions in the manifest were identified from the images themselves, not
+read off a museum record — the Rembrandt and the two Cuyps are certain, the rest
+are confident. Only the picker label depends on them.
+
+If a painting never appears, `:checkhealth nvim-config` reports on each link in
+the chain separately — terminal, rendered files, the saved choice, ImageMagick,
+and tmux's `allow-passthrough`, which tmux needs before it will forward the
+escape code at all.
 
 The file explorer opens on the **right** (`<Space>e`), so toggling it doesn't shift
 your code sideways.

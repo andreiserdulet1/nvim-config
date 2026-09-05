@@ -22,6 +22,24 @@ do
   end
 end
 
+-- A faded Dutch landscape behind the code, drawn by iTerm2 underneath a
+-- transparent colourscheme. Decided here, before lazy.nvim loads, because both
+-- colourschemes read the flag while building their highlights -- setting it
+-- later would need a re-apply and a visible repaint.
+--
+-- Transparency is only turned on when a painting can actually appear: iTerm2 is
+-- the only terminal that understands the escape code, and terminal/paintings/
+-- import.sh has to have been run. A fresh clone that has done neither looks
+-- completely normal rather than showing an editor with no background at all.
+do
+  local ok, painting = pcall(require, "config.painting")
+  vim.g.graphite_transparent = ok
+    and painting.supported()
+    and painting.installed()
+    and painting.choice() ~= painting.NONE
+end
+
 require("config.options")
 require("config.lazy")
 require("config.keymaps")
+require("config.painting").setup()

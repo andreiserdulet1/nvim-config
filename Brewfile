@@ -15,6 +15,12 @@ brew "tree-sitter-cli"  # nvim-treesitter's main branch compiles parsers with th
 brew "lazygit"          # <leader>gg, the main git interface
 brew "gh"               # GitHub PRs (<leader>p) and Actions (<leader>A)
 
+# --- Background paintings ---------------------------------------------------
+# Only needed to RENDER the backgrounds: terminal/paintings/import.sh
+# composites each painting over the theme's ground colour and writes the result
+# to ~/.local/share/nvim/paintings. Neovim never shells out to it afterwards.
+brew "imagemagick"      # terminal/paintings/import.sh
+
 # --- Infrastructure work ----------------------------------------------------
 # terraform was removed from homebrew-core when its licence changed, so the tap
 # is required: `brew install terraform` on its own fails.

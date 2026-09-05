@@ -23,7 +23,7 @@ local M = {}
 function M.highlights(p)
   local none = "NONE"
 
-  return {
+  local groups = {
     ----------------------------------------------------------------------
     -- Editor
     ----------------------------------------------------------------------
@@ -424,11 +424,47 @@ function M.highlights(p)
 
     -- the cheatsheet buffer uses Title/Statement/Comment, already covered
   }
+
+  ------------------------------------------------------------------------
+  -- Transparency
+  ------------------------------------------------------------------------
+  -- Set by init.lua when a background painting is available, so the terminal
+  -- shows through the editing canvas. Four groups is the whole change:
+  -- SignColumn, FoldColumn and Winbar are already NONE above and inherit from
+  -- Normal, so they come along for free.
+  --
+  -- What stays opaque is the deliberate half. Floats, popups, the completion
+  -- menu, the statusline and the Telescope surfaces are where you most need
+  -- text to be unambiguous, and a solid `surface` behind them costs nothing
+  -- visually. CursorLine keeps its fill too, which gives a clean band under the
+  -- line being edited.
+  if vim.g.graphite_transparent then
+    groups.Normal.bg = none
+    groups.NormalNC.bg = none
+    groups.TabLineFill.bg = none
+
+    -- EndOfBuffer hides the `~` markers by painting them the background colour.
+    -- That trick needs a background to match, and there isn't one any more, so
+    -- they become a faint gutter mark instead of ground-coloured text sitting
+    -- visibly on top of a painting.
+    groups.EndOfBuffer = { fg = p.gutter, bg = none }
+  end
+
+  return groups
 end
 
 --- Apply Graphite for the current `background`.
 function M.load()
   local palette = require("graphite.palette").get()
+
+  -- A background painting lifts the ground colour, which costs comments most of
+  -- their contrast margin. Swapping the palette entry rather than the handful
+  -- of highlight groups means every group that reads `comment` -- Comment,
+  -- @comment, NeoTreeGitUntracked, the dashboard footer and a dozen others --
+  -- follows automatically and cannot drift apart.
+  if vim.g.graphite_transparent then
+    palette = vim.tbl_extend("force", palette, { comment = palette.comment_on_painting })
+  end
 
   if vim.g.colors_name then vim.cmd("hi clear") end
   if vim.fn.exists("syntax_on") == 1 then vim.cmd("syntax reset") end

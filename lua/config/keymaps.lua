@@ -20,6 +20,11 @@ map("n", "<leader>uT", function()
   require("telescope.builtin").colorscheme({ enable_preview = true })
 end, { desc = "Pick a colourscheme" })
 
+-- Background paintings, previewed the same way. "No background" is an entry in
+-- the list, so this is also how you turn the whole thing off.
+map("n", "<leader>ub", function() require("config.painting").menu() end,
+  { desc = "Pick a background painting" })
+
 -- Colour swatches in CSS/SCSS are native in Neovim 0.12: cssls advertises
 -- colorProvider and vim.lsp.document_color renders the swatches, on by
 -- default. No plugin needed -- this just makes it toggleable.
