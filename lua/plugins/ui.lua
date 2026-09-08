@@ -37,7 +37,10 @@ return {
               return table.concat(names, " ")
             end,
             icon = " ",
-            color = { fg = "#7aa2f7" },
+            -- Was a hard-coded #7aa2f7 -- tokyonight's blue, which outlived that
+            -- theme's removal and sat as a stray cool note in four warm
+            -- statuslines. Linked instead, so it follows whatever is active.
+            color = "Function",
           },
           { "diff" },
           { "filetype" },

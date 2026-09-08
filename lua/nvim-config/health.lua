@@ -202,12 +202,19 @@ function M.check()
       .. ". Everything else works exactly as normal.")
   end
 
+  -- Renders are per theme: a painting mapped into one theme's band and shown
+  -- behind another sits in a visible rectangle and loses its contrast
+  -- guarantee. So this counts what exists FOR THE ACTIVE THEME, and a theme
+  -- added without re-running import.sh reports as unrendered rather than
+  -- borrowing another theme's files.
+  local scheme = vim.g.colors_name or "graphite"
   local slugs = painting.slugs()
   if #slugs > 0 then
-    health.ok(("%d paintings rendered"):format(#slugs))
+    health.ok(("%d paintings rendered for %s"):format(#slugs, scheme))
   else
-    health.warn("No paintings rendered",
+    health.warn("No paintings rendered for " .. scheme,
       { "Run ~/.config/nvim/terminal/paintings/import.sh",
+        "Or just this theme: import.sh --theme " .. scheme,
         "Until then the theme stays opaque, which is a working editor." })
   end
 

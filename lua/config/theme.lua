@@ -23,6 +23,7 @@ M.families = {
   { dark = "graphite",  light = "graphite",  by_background = true },
   { dark = "heather",   light = "heather",   by_background = true },
   { dark = "malachite", light = "malachite", by_background = true },
+  { dark = "umber",     light = "umber",     by_background = true },
 }
 
 M.default = "graphite"

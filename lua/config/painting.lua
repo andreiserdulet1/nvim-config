@@ -66,10 +66,26 @@ end
 
 --- Every painting with a rendered variant on disk.
 ---@return string[] slugs
+-- The active colourscheme, for naming renders.
+--
+-- Every theme gets its own render of every painting, because a painting mapped
+-- into one theme's band and shown behind another is wrong twice: its darkest
+-- tone no longer equals the ground, so the image sits in a visible rectangle,
+-- and its 4.5:1 guarantee was solved against a different text colour.
+--
+-- Named active_theme, not theme: config.theme is required under that name in
+-- several functions below, and shadowing it here would be a trap.
+local function active_theme()
+  return vim.g.colors_name or "graphite"
+end
+
+--- Slugs rendered FOR THE ACTIVE THEME. Scoped deliberately: counting another
+--- theme's files would report a painting as available and then fail to find it.
 function M.slugs()
+  local suffix = "-" .. active_theme() .. "-dark"
   local out = {}
-  for _, path in ipairs(vim.fn.glob(DIR .. "/*-dark.png", false, true)) do
-    out[#out + 1] = (vim.fn.fnamemodify(path, ":t:r"):gsub("%-dark$", ""))
+  for _, path in ipairs(vim.fn.glob(DIR .. "/*" .. suffix .. ".png", false, true)) do
+    out[#out + 1] = (vim.fn.fnamemodify(path, ":t:r"):gsub(vim.pesc(suffix) .. "$", ""))
   end
   table.sort(out)
   return out
@@ -97,12 +113,13 @@ local function label_for(slug)
   return labels[slug] or slug
 end
 
---- The file for a slug, on whichever side of the light/dark toggle we are on.
+--- The file for a slug, for the active theme and whichever side of the
+--- light/dark toggle we are on.
 ---@param slug string
 ---@return string path
 function M.path(slug)
   local variant = vim.o.background == "light" and "light" or "dark"
-  return ("%s/%s-%s.png"):format(DIR, slug, variant)
+  return ("%s/%s-%s-%s.png"):format(DIR, slug, active_theme(), variant)
 end
 
 --------------------------------------------------------------------------

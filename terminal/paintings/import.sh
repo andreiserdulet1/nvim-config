@@ -5,7 +5,7 @@
 #   ~/.config/nvim/terminal/paintings/import.sh [source-dir] [--force]
 #
 # Neovim cannot draw a background image -- it paints character cells, not
-# pixels -- so the image comes from iTerm2 underneath, with Graphite made
+# pixels -- so the image comes from iTerm2 underneath, with the theme made
 # transparent so it shows through. This script prepares what iTerm2 displays.
 #
 # It does NOT blend the painting over the ground at some opacity. That was the
@@ -23,10 +23,20 @@
 # river scene come out at the same weight, which is the point.
 #
 # The ceilings are not chosen by eye. Each is the furthest the ground can travel
-# toward the theme's text colour while Graphite's comment colour -- the
-# lowest-contrast text the theme admits -- still clears WCAG 4.5:1, the same
-# floor every colour in palette.lua was measured against. See
-# `comment_on_painting` there for the other half of the arrangement.
+# toward the theme's text colour while that theme's comment colour -- the
+# lowest-contrast text it admits -- still clears WCAG 4.5:1, the same floor every
+# colour in the palette was measured against. See `comment_on_painting` and
+# `ceiling` in lua/scheme/palettes/<theme>.lua for the other half.
+#
+# EVERY THEME GETS ITS OWN RENDER. A painting mapped into one theme's band and
+# shown behind another is wrong twice over: its darkest tone no longer equals the
+# ground, so the image sits in a visible rectangle, and the 4.5:1 guarantee was
+# solved against the wrong text colour. So the grounds, ceilings and comment
+# colours are read out of the palette files rather than written here, and the
+# output is named <slug>-<theme>-<variant>.png.
+#
+#   import.sh                 render every theme
+#   import.sh --theme umber   just the one
 #
 # Safe to run repeatedly. Existing renders are kept; --force redoes them.
 
@@ -45,18 +55,47 @@ SRC="$REPO/src"
 
 DOWNLOADS="$HOME/Downloads"
 FORCE=0
+ONLY_THEME=""
+want_theme=0
 for arg in "$@"; do
+  if [[ $want_theme -eq 1 ]]; then ONLY_THEME="$arg"; want_theme=0; continue; fi
   case "$arg" in
     --force) FORCE=1 ;;
+    --theme) want_theme=1 ;;
+    --theme=*) ONLY_THEME="${arg#--theme=}" ;;
     *) DOWNLOADS="$arg" ;;
   esac
 done
 
-# Graphite's grounds and the ceilings solved against them, from
-# lua/graphite/palette.lua. The comment colours are the ones that apply while a
-# painting is showing (`comment_on_painting`), not the everyday ones.
-DARK_GROUND="#17161a";  DARK_CEIL="#363436";  DARK_COMMENT="#a39b8f"
-LIGHT_GROUND="#faf7f2"; LIGHT_CEIL="#d8d5d0"; LIGHT_COMMENT="#635c51"
+PALETTES="$(cd "$REPO/../../lua/scheme/palettes" && pwd)"
+
+# Pull `ground`, `ceiling` and `comment_on_painting` out of one variant block of
+# a palette file. The format is regular -- `key = "#hex",` inside `M.dark = {`
+# or `M.light = {` -- so awk tracking which block it is inside is enough, and
+# the script stays runnable without Neovim.
+#
+# The comment colour taken is `comment_on_painting`, the one that applies while a
+# painting is showing, NOT the everyday `comment`.
+palette_band() {
+  local file=$1 variant=$2
+  awk -v want="$variant" '
+    /^M\.(dark|light) = \{/ {
+      block = $0; sub(/^M\./, "", block); sub(/ .*/, "", block)
+      inblock = (block == want); next
+    }
+    /^}/ { inblock = 0 }
+    inblock && /^[[:space:]]*ground[[:space:]]*=/      { g = $0 }
+    inblock && /^[[:space:]]*ceiling[[:space:]]*=/     { c = $0 }
+    inblock && /^[[:space:]]*comment_on_painting[[:space:]]*=/ { t = $0 }
+    END {
+      if (g == "" || c == "" || t == "") exit 1
+      for (i = 1; i <= 3; i++) {
+        line = (i == 1 ? g : (i == 2 ? c : t))
+        match(line, /#[0-9a-fA-F]{6}/)
+        printf "%s%s", substr(line, RSTART, RLENGTH), (i < 3 ? " " : "\n")
+      }
+    }' "$file"
+}
 
 WCAG_FLOOR=4.5
 GEOM="3840x2400"   # 16:10 at retina density; iTerm2 rescales to the window
@@ -133,16 +172,30 @@ render() {
   # the measurement itself; anything worse than that is a real regression.
   verdict=$(awk -v a="$achieved" -v f="$WCAG_FLOOR" 'BEGIN{print (a + 0.02 >= f) ? "ok" : "BELOW FLOOR"}')
   [[ "$verdict" != "ok" ]] && failed=1
-  printf '  %-32s %s:1  %s\n' "$(basename "$dest")" "$achieved" "$verdict"
+  printf '  %-40s %s:1  %s\n' "$(basename "$dest")" "$achieved" "$verdict"
 }
 
 # --- Main -------------------------------------------------------------------
 
+# Which themes to render. One palette file each; ordered so the default comes
+# first and a --force run shows it soonest.
+THEMES=()
+for f in "$PALETTES"/*.lua; do
+  name="$(basename "$f" .lua)"
+  [[ -n "$ONLY_THEME" && "$name" != "$ONLY_THEME" ]] && continue
+  THEMES+=("$name")
+done
+if [[ ${#THEMES[@]} -eq 0 ]]; then
+  printf 'No palettes matched%s in %s\n' \
+    "${ONLY_THEME:+ \"$ONLY_THEME\"}" "${PALETTES/#$HOME/~}" >&2
+  exit 1
+fi
+
 echo "Importing from ${DOWNLOADS/#$HOME/~}"
-echo "Tone-mapped into ${DARK_GROUND}..${DARK_CEIL} (dark) and ${LIGHT_CEIL}..${LIGHT_GROUND} (light)"
+echo "Themes: ${THEMES[*]}"
 echo
-printf '  %-32s %s\n' "file" "comment contrast, measured"
-printf '  %-32s %s\n' "--------------------------------" "--------------------------"
+printf '  %-40s %s\n' "file" "comment contrast, measured"
+printf '  %-40s %s\n' "----------------------------------------" "--------------------------"
 
 while IFS=$'\t' read -r slug source label; do
   [[ "$slug" =~ ^# || -z "$slug" ]] && continue
@@ -160,10 +213,14 @@ while IFS=$'\t' read -r slug source label; do
     fi
   fi
 
-  dark="$OUT/$slug-dark.png"
-  light="$OUT/$slug-light.png"
-  if [[ -f "$dark" && -f "$light" && $FORCE -eq 0 ]]; then
-    printf '  %-32s already rendered\n' "$slug"
+  # Skip the (expensive) prepare step only when every theme already has both
+  # variants -- otherwise a newly added theme would never get rendered.
+  needed=0
+  for theme in "${THEMES[@]}"; do
+    [[ -f "$OUT/$slug-$theme-dark.png" && -f "$OUT/$slug-$theme-light.png" ]] || needed=1
+  done
+  if [[ $needed -eq 0 && $FORCE -eq 0 ]]; then
+    printf '  %-40s already rendered for every theme\n' "$slug"
     continue
   fi
 
@@ -181,17 +238,26 @@ while IFS=$'\t' read -r slug source label; do
   fi
 
   printf '  %s\n' "$label"
-  render "$prepared" "$dark"  "$DARK_GROUND"  "$DARK_CEIL"  "$DARK_COMMENT"
-  # Light: the painting darkens paper, so the ramp runs the other way -- the
-  # painting's blacks become the ceiling and its whites become the ground.
-  render "$prepared" "$light" "$LIGHT_CEIL" "$LIGHT_GROUND" "$LIGHT_COMMENT"
+  for theme in "${THEMES[@]}"; do
+    if ! read -r d_ground d_ceil d_comment < <(palette_band "$PALETTES/$theme.lua" dark) \
+       || ! read -r l_ground l_ceil l_comment < <(palette_band "$PALETTES/$theme.lua" light); then
+      printf '  %-40s could not read its band from %s.lua\n' "$theme" "$theme" >&2
+      failed=1
+      continue
+    fi
+    render "$prepared" "$OUT/$slug-$theme-dark.png"  "$d_ground" "$d_ceil"  "$d_comment"
+    # Light: the painting darkens paper, so the ramp runs the other way -- the
+    # painting's blacks become the ceiling and its whites become the ground.
+    render "$prepared" "$OUT/$slug-$theme-light.png" "$l_ceil"   "$l_ground" "$l_comment"
+  done
 done < "$MANIFEST"
 
 echo
-count=$(find "$OUT" -maxdepth 1 -name '*-dark.png' 2>/dev/null | wc -l | tr -d ' ')
+count=$(find "$OUT" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l | tr -d ' ')
+themes=${#THEMES[@]}
 if [[ "$failed" -eq 0 ]]; then
-  echo "Done. $count paintings ready -- <Space>ub in Neovim to pick one."
+  echo "Done. $count renders across $themes theme(s) -- <Space>ub in Neovim to pick one."
 else
-  echo "Finished with warnings above. $count paintings usable." >&2
+  echo "Finished with warnings above. $count renders written." >&2
   exit 1
 fi

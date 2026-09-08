@@ -118,6 +118,7 @@ choices are remembered next time you start.
 | **graphite** *(default)* | dark / light | warm neutral greys, amber and sage |
 | **heather** | dark / light | pale lilac paper, orange and plum |
 | **malachite** | dark / light | cool charcoal, one green accent |
+| **umber** | dark / light | made from the paintings themselves |
 
 **All three ship in this repo** — `colors/*.lua` with palettes in
 `lua/scheme/palettes/` — and none is a plugin, because `~/.config/nvim` is already
@@ -173,6 +174,28 @@ and separate by lightness. Graphite does the same with its two warm tones.
 lualine's `theme = "auto"` produced a grey-on-grey statusline (3.34:1), so
 `lua/scheme/lualine.lua` builds the table from whichever palette is active.
 
+**Umber was derived, not chosen.** All eight paintings in `terminal/paintings/src/`
+were quantised, pooled — 183 colours weighted by pixel count — and clustered by
+hue:
+
+| Cluster | Mean | Share | Becomes |
+|---|---|---|---|
+| near-black | `#1b130e` | 15.2% | the dark ground |
+| deep umber | `#49341e` | 26.1% | surface, raised, gutter |
+| warm mid | `#a99c7c` | 21.5% | `dim`, and the comment hue |
+| gold / ochre | `#96723a` | 6.6% | functions |
+| cream | `#ebead8` | 6.2% | the light ground, and dark's text |
+| olive foliage | `#a8ae96` | 1.7% | strings |
+| slate sky | `#b3cbca` | 0.3% | numbers |
+
+Rembrandt's red-brown `#53261a` carries keywords and errors — the one strong hue
+in the set that is neither earth nor sky.
+
+The point of that ground is that it is **the paintings' own darkest tone**.
+`import.sh` maps each painting's black point onto the theme's ground, so under
+Umber the image has no edge at all: there is no rectangle, the picture just
+dissolves into the page.
+
 ### Background paintings
 
 A Dutch Golden Age landscape sits behind the code. **`<Space>ub`** picks one, with
@@ -215,23 +238,37 @@ a near-black van der Neer nocturne and a near-white van Goyen river come out at
 the same weight, which is the point of having eight.
 
 The ceilings are solved, not chosen: each is the furthest the ground can travel
-toward the text colour while comment text still clears 4.5:1.
+toward the text colour while comment text still clears 4.5:1. Every theme has its
+own band, recorded as `ground`, `ceiling` and `comment_on_painting` in
+`lua/scheme/palettes/<theme>.lua` — `import.sh` reads them from there rather than
+carrying its own copy:
 
-| | Ground | Ceiling | Comment | |
-|---|---|---|---|---|
-| dark | `#17161a` | `#363436` | `#8b8274` → `#a39b8f` | 4.51:1 |
-| light | `#faf7f2` | `#d8d5d0` | `#736a5e` → `#635c51` | 4.50:1 |
+| Theme | dark ground → ceiling | light ceiling → ground |
+|---|---|---|
+| graphite | `#17161a` → `#363436` | `#d8d5d0` → `#faf7f2` |
+| heather | `#012622` → `#22423f` | `#cbc5ce` → `#ECE5F0` |
+| malachite | `#272D2D` → `#414646` | `#ccd3d9` → `#EDF5FC` |
+| umber | `#1b130e` → `#3a332c` | `#cac9ba` → `#ebead8` |
 
-That comment shift is the price, and it is **only** paid while a painting is
-showing — `palette.lua` carries it as `comment_on_painting`, and picking *No
+**Each theme gets its own render of every painting** — `<slug>-<theme>-<variant>.png`.
+A painting mapped into one theme's band and shown behind another is wrong twice
+over: its darkest tone no longer equals the ground, so the image sits in a
+visible rectangle, and its 4.5:1 guarantee was solved against a different text
+colour. That is 8 paintings × 2 variants × 4 themes = 64 files, about 72MB in
+`~/.local/share/nvim/paintings` — not in this repo. `import.sh --theme umber`
+renders just one.
+
+The comment shift is the price, and it is **only** paid while a painting is
+showing — the palette carries it as `comment_on_painting`, and picking *No
 background* restores the original colours along with the solid ground. Body text
-is unaffected either way (8.1:1 dark, 11.0:1 light).
+is unaffected either way.
 
 `import.sh` measures the ratio back off each rendered file and prints it, rather
-than trusting the arithmetic. Every render reports `ok` or `BELOW FLOOR`.
+than trusting the arithmetic. All 64 report `ok`.
 
 Two variants exist per painting, dark and paper-light, so `<Space>ut` swaps the
-background along with the theme instead of leaving a grey rectangle behind.
+background along with the theme instead of leaving a grey rectangle behind, and
+`<Space>uT` swaps it again for the new theme's own render.
 
 Floats, popups, the completion menu, the statusline and Telescope stay **opaque**
 on purpose. Those are where you most need text to be unambiguous, and a painting

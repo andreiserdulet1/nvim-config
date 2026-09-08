@@ -29,6 +29,11 @@ M.dark = {
   selection = "#4a5156",
   border    = "#586166",
 
+  -- The furthest the ground may travel toward `text` while
+  -- `comment_on_painting` still clears 4.5:1. terminal/paintings/import.sh
+  -- reads this and maps each painting's white point onto it.
+  ceiling   = "#414646",
+
   text      = "#EDF5FC", -- 12.72:1  the snow, as given
   dim       = "#B8C5D6", --  8.00:1  the steel, as given
   comment   = "#A39BA8", --  5.21:1  the mauve, as given -- it already clears 4.5
@@ -59,6 +64,10 @@ M.light = {
   raised    = "#dde7f1",
   selection = "#d0dbe7",
   border    = "#b6bdc2",
+
+  -- A painting darkens paper rather than lifting it, so the ramp runs the
+  -- other way: the painting's blacks land here and its whites on the ground.
+  ceiling   = "#ccd3d9",
 
   text      = "#272D2D", -- 12.72:1  the charcoal, as given
   dim       = "#3b4949", --  8.53:1

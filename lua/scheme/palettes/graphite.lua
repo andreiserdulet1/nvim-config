@@ -23,6 +23,11 @@ M.dark = {
   selection = "#302c33", -- visual selection
   border    = "#3a3540", -- window separators, float borders
 
+  -- The furthest the ground may travel toward `text` while
+  -- `comment_on_painting` still clears 4.5:1. terminal/paintings/import.sh
+  -- reads this and maps each painting's white point onto it.
+  ceiling   = "#363436",
+
   -- text
   text      = "#d6d0c8", -- 11.76:1
   dim       = "#b3aca3", --  8.02:1  operators, punctuation, secondary UI
@@ -60,6 +65,10 @@ M.light = {
   raised    = "#f0ebe2",
   selection = "#e4ddd1",
   border    = "#d6cec0",
+
+  -- A painting darkens paper rather than lifting it, so the ramp runs the
+  -- other way: the painting's blacks land here and its whites on the ground.
+  ceiling   = "#d8d5d0",
 
   text      = "#23201c", -- 15.18:1
   dim       = "#4a453e", --  8.88:1

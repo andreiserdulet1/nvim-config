@@ -36,6 +36,10 @@ M.light = {
   selection = "#d3c1d4",
   border    = "#c3aac2",
 
+  -- A painting darkens paper rather than lifting it, so the ramp runs the
+  -- other way: the painting's blacks land here and its whites on the ground.
+  ceiling   = "#cbc5ce",
+
   text      = "#012622", -- 13.09:1  the ink, as given
   dim       = "#003B36", -- 10.15:1  the teal, as given
   comment   = "#7f5578", --  4.90:1  plum, desaturated and lightened to clear 4.5
@@ -67,6 +71,11 @@ M.dark = {
   raised    = "#003732", -- the teal, essentially, as a raised fill
   selection = "#311a3a",
   border    = "#426b6a",
+
+  -- The furthest the ground may travel toward `text` while
+  -- `comment_on_painting` still clears 4.5:1. terminal/paintings/import.sh
+  -- reads this and maps each painting's white point onto it.
+  ceiling   = "#22423f",
 
   text      = "#ECE5F0", -- 13.09:1  the lilac, as given
   dim       = "#c1b2c9", --  8.05:1  lilac, desaturated
