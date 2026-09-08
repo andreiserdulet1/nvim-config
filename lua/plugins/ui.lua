@@ -213,11 +213,6 @@ return {
         -- No neo-tree offset: bufferline offsets only reserve space on the LEFT
         -- edge, and the tree now opens on the right. Leaving it in would indent
         -- the tab bar on the side the tree is not on.
-        -- Angular projects are full of same-named files (component.ts in every
-        -- folder), so show enough path to tell them apart.
-        name_formatter = function(buf)
-          return vim.fn.fnamemodify(buf.name, ":t")
-        end,
         diagnostics_indicator = function(_, _, diag)
           local s = {}
           if diag.error then table.insert(s, " " .. diag.error) end
@@ -299,6 +294,11 @@ return {
       quickfile = { enabled = true },
       indent = { enabled = true, scope = { enabled = false } },
       input = { enabled = true },
+      -- ui_select only -- this does NOT replace Telescope, which still owns
+      -- every <leader>f key. It exists so vim.ui.select (config/actions.lua,
+      -- scripts.lua, angular.lua, projects.lua, jira.lua) stops depending on
+      -- telescope-ui-select, unmaintained since December 2023.
+      picker = { enabled = true, ui_select = true },
       dashboard = {
         enabled = true,
         preset = {
@@ -317,7 +317,7 @@ return {
             { icon = " ", key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
             { icon = " ", key = "p", desc = "Projects", action = ":lua require('config.projects').pick()" },
             { icon = " ", key = "?", desc = "Cheatsheet", action = ":lua require('config.cheatsheet').open()" },
-            { icon = " ", key = "t", desc = "Learn vim (:Tutor)", action = ":Tutor" },
+            { icon = " ", key = "j", desc = "Jira sprint", action = ":lua require('config.jira').sprint()" },
             { icon = "󰒲 ", key = "l", desc = "Plugins", action = ":Lazy" },
             { icon = " ", key = "q", desc = "Quit", action = ":qa" },
           },

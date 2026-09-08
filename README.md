@@ -26,10 +26,13 @@ prompt and the global gitignore into place. It backs up anything already there a
 It never touches `~/.zshrc` — that file has machine-specific things in it, so the
 lines it needs are recorded in `terminal/zshrc.snippet` and only checked for.
 
-First launch installs 48 plugins and downloads language servers; give it a couple
+First launch installs 44 plugins and downloads language servers; give it a couple
 of minutes and watch the bottom of the screen. Then run **`:checkhealth nvim-config`** —
 it lists every command-line tool this config drives, what depends on each one, and
 the exact command to install anything missing.
+
+Jira needs three more commands and a Keychain entry, which are deliberately not
+automated — see [Jira](#jira).
 
 Language servers, linters and debug adapters are **not** in the Brewfile; Mason
 installs those. Note that `brew bundle check` also reports merely *outdated*
@@ -37,8 +40,8 @@ formulae as unsatisfied, so don't read that as broken.
 
 ## Your first fifteen minutes
 
-If you've never used vim, spend thirty minutes on **`:Tutor`** first — it ships with
-Neovim and it's on the start screen. Nothing below will make sense without it.
+If you've never used vim, spend thirty minutes on `vimtutor` first — run it in a
+terminal, not in here. Nothing below will make sense without it.
 
 Then, in order:
 
@@ -57,9 +60,9 @@ They're documented below when you want them.
 Two things that will save you: **`<Space>uu`** shows your undo history as a tree, so
 nothing is ever really lost, and reopening a file puts you back where you were.
 
-Hardtime is on by default and will nag when you hold `j` or reach for the arrow
-keys — that's deliberate, it teaches better motions. **`<Space>uH`** turns it off if
-you'd rather not. **`<Space>up`** turns on motion hints while you're learning.
+There used to be two teaching plugins here — hardtime nagging you for holding `j`,
+and precognition drawing motion hints. Both were removed once they had done their
+job; if you want them back they are two entries in `lua/plugins/editor.lua`.
 
 ---
 
@@ -73,6 +76,7 @@ you'd rather not. **`<Space>up`** turns on motion hints while you're learning.
 │   ├── keymaps.lua          keymaps that don't belong to a plugin
 │   ├── lazy.lua             plugin manager bootstrap
 │   ├── cheatsheet.lua       the <Space>? popup
+│   ├── jira.lua             sprint, board, transitions, comments
 │   └── projects.lua         project switcher over ~/projects
 └── lua/plugins/
     ├── ui.lua               colorscheme, statusline, buffer tabs, dashboard
@@ -300,6 +304,77 @@ logs and watching all work without it.
 `<Space>pl` lists this repo's PRs, `<Space>pp` opens the one for your branch,
 `<Space>pr` starts a review and `<Space>pR` submits it. `<Space>pi` for issues,
 `<Space>ps` to search. It drives the `gh` CLI you're already logged into.
+
+### Jira
+
+`<Space>js` is the current sprint, `<Space>jb` is the board a column at a time,
+`<Space>jm` is your own open issues, `<Space>jf` searches. All four open a
+picker; from inside it you act on the highlighted issue without leaving the
+list:
+
+| In the picker | |
+|---|---|
+| `<CR>` | menu of everything below, if you'd rather not memorise the keys |
+| `<C-t>` | move it to another column |
+| `<C-a>` | assign it |
+| `<C-c>` | comment on it |
+| `<C-o>` | open it in the browser |
+| `<C-v>` | view it, description and comments, in a split |
+
+The columns offered by `<C-t>` are the statuses actually present in the sprint,
+so they are your board's real columns and not a list baked into this repo.
+
+The same five actions have direct keys — `<Space>jv` view, `<Space>jt` move,
+`<Space>ja` assign, `<Space>jc` comment, `<Space>jo` open — and they work out
+which issue you mean from the branch name. On `feature/AWIN-1841-rounding`,
+`<Space>jc` comments on AWIN-1841 without asking. Failing that it reads the key
+under the cursor, and failing that it prompts.
+
+`<Space>jc` opens a scratch buffer rather than a prompt, so a comment can be as
+long as it needs to be and can be edited before it goes. `<C-s>` posts it, `q`
+throws it away.
+
+`<Space>jj` drops to the raw `jira-cli` explorer in a float for anything this
+layer doesn't wrap.
+
+#### Setting it up
+
+Everything shells out to [jira-cli](https://github.com/ankitpokhrel/jira-cli),
+which the Brewfile installs. Three commands, once:
+
+```sh
+# 1. Create a token at
+#    https://id.atlassian.com/manage-profile/security/api-tokens
+#    `read -rs` keeps it out of your shell history.
+read -rs JIRA_API_TOKEN && export JIRA_API_TOKEN
+
+# 2. Configure jira-cli. Answer: Cloud, https://<your-site>.atlassian.net,
+#    your work email, then pick your project and board.
+jira init
+
+# 3. Hand the token to the Keychain, and drop it from this shell.
+security add-generic-password -s jira-api-token -a "$(jira me)" -U -w
+unset JIRA_API_TOKEN
+```
+
+Then `:checkhealth nvim-config` — the **Jira** section walks the same four steps
+in order and tells you which one is missing.
+
+#### Where the credential lives
+
+**This repo is public. Nothing here holds a token, a site URL or an email
+address, and nothing should.**
+
+- The token is in the macOS Keychain. Neovim reads it once per session and puts
+  it in the environment of the `jira` process alone — never into `vim.env`, so
+  it can't reach a `:terminal`, another plugin, or any other child process.
+- The Keychain account is read from jira-cli's `login:` line rather than written
+  into the Lua, which is why no address appears in this repo.
+- jira-cli's own config is `~/.config/.jira/.config.yml`, outside this
+  repository.
+- If you rotate the token: re-run the `security add-generic-password` line above
+  (`-U` updates in place), then `:lua require("config.jira").forget()` or
+  restart, since the old one is cached for the session.
 
 ### Sessions and breadcrumbs
 
@@ -541,27 +616,29 @@ the hunks — pick a side, or `e` to open it in Neovim and edit properly.
 
 For small things you don't need lazygit at all: `]h`/`[h` jump between changed
 hunks, `<Space>ghs` stages the hunk under the cursor, `<Space>ghp` previews it,
-`<Space>gb` blames the line.
+`<Space>gb` blames the line; `<Space>ug` leaves the blame on every line as you
+move.
 
 To review a whole branch before opening a PR: `<Space>gm` diffs everything on
 your branch against master in a proper two-pane view. `<Space>gq` closes it.
 
 ### Merge conflicts
 
-The keys are the same whether you use the three-pane view or fix the file in
-place: `<Space>co` takes ours, `<Space>ct` takes theirs, `<Space>cb` takes both,
-`<Space>cn` takes neither, and `]x` / `[x` move between conflicts.
+**`<Space>gx` starts it.** It opens the three-pane merge view — OURS on the left,
+the working copy in the middle, THEIRS on the right — the same shape as
+WebStorm's merge dialog. If there's nothing to merge it says so rather than
+opening an empty diff and leaving you to work out why.
 
-**For anything non-trivial, `<Space>gx`.** It opens the three-pane merge view —
-OURS on the left, the working copy in the middle, THEIRS on the right — the same
-shape as WebStorm's merge dialog. `<Space>cO` and `<Space>cT` take a whole file at
-once when one side wins outright. If there's nothing to merge it says so rather
-than opening an empty diff and leaving you to work out why.
+Inside that view: `<Space>co` takes ours, `<Space>ct` takes theirs, `<Space>cb`
+takes both, `<Space>cn` takes neither, and `]x` / `[x` move between conflicts.
+`<Space>cO` and `<Space>cT` take a whole file at once when one side wins
+outright.
 
-**For a two-line conflict, just open the file.** Conflicted regions are
-highlighted in place and the same keys work, with no extra windows and no mode to
-enter. TypeScript diagnostics are suppressed while markers are present, since a
-conflicted file isn't valid code and the errors are noise.
+git-conflict.nvim used to let you resolve a small conflict in the buffer itself,
+without opening the merge view. It was dropped: upstream stopped in December
+2024, and it called `vim.diagnostic.disable()`, which Neovim 0.12 removed, so it
+needed a workaround here to run at all. The merge view is one keypress away and
+does the same job.
 
 `<Space>gX` puts every conflicted file in the quickfix list, each entry pointing
 at its first marker — useful when a rebase breaks eight files at once.

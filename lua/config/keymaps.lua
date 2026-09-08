@@ -6,9 +6,10 @@ local map = vim.keymap.set
 map("n", "<leader>?", function() require("config.cheatsheet").open() end,
   { desc = "Cheatsheet" })
 
--- The full web guide
+-- The full write-up. This is the README in the repo this config lives in, so
+-- it moves with the config instead of pointing at a link that will rot.
 map("n", "<leader>gu", function()
-  vim.ui.open("https://claude.ai/code/artifact/fa81e147-7724-4e98-9a71-0a9f36c71547")
+  vim.ui.open("https://github.com/andreiserdulet1/nvim-config#readme")
 end, { desc = "Open the web guide" })
 
 -- Themes. <leader>ut flips light/dark within the current family; <leader>uT
@@ -40,7 +41,7 @@ map("n", "<leader>uv", "<cmd>CsvViewToggle display_mode=border<cr>",
 
 -- Header treatment is per file: the locale exports have no header row, but
 -- duplicate.csv and allcardsfile.csv do. This flips it for the current buffer.
-vim.b.csv_header_on = false
+-- Unset means off, which is what the locale exports want.
 map("n", "<leader>uh", function()
   if vim.bo.filetype:match("csv") == nil and vim.bo.filetype ~= "tsv" then
     vim.notify("Not a CSV buffer", vim.log.levels.WARN)
@@ -89,6 +90,33 @@ map("n", "<leader>Af", acts("logs", nil, true), { desc = "Failed steps of the la
 map("n", "<leader>Aw", acts("watch"), { desc = "Watch the running workflow" })
 map("n", "<leader>Ar", acts("rerun"), { desc = "Re-run failed jobs" })
 map("n", "<leader>Ad", acts("dispatch"), { desc = "Dispatch a workflow (confirms)" })
+
+-- Jira ----------------------------------------------------------------------
+-- The sprint, the board and the four things that interrupt coding: move,
+-- assign, comment, open. Everything shells out to the `jira` CLI, whose API
+-- token comes from the macOS Keychain. See lua/config/jira.lua.
+--
+-- The keys that act on "this issue" resolve it from the branch name first, so
+-- on a branch called feature/AWIN-1841-rounding they need no argument at all.
+local jira = function(fn)
+  return function() require("config.jira")[fn]() end
+end
+local on_current = function(fn)
+  return function()
+    local j = require("config.jira")
+    j.current(function(key) j[fn](key) end)
+  end
+end
+map("n", "<leader>js", jira("sprint"), { desc = "Current sprint" })
+map("n", "<leader>jb", jira("board"), { desc = "Board (pick a column)" })
+map("n", "<leader>jm", jira("mine"), { desc = "My open issues" })
+map("n", "<leader>jf", jira("search"), { desc = "Search issues" })
+map("n", "<leader>jj", jira("tui"), { desc = "jira-cli explorer (float)" })
+map("n", "<leader>jv", on_current("view"), { desc = "View this issue" })
+map("n", "<leader>jt", on_current("move"), { desc = "Move this issue" })
+map("n", "<leader>ja", on_current("assign"), { desc = "Assign this issue" })
+map("n", "<leader>jc", on_current("comment"), { desc = "Comment on this issue" })
+map("n", "<leader>jo", on_current("open"), { desc = "Open this issue in the browser" })
 
 -- Angular CLI ---------------------------------------------------------------
 -- <leader>ng is a prefix only, never a leaf: a key that is both an action and

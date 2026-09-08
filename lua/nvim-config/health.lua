@@ -17,6 +17,7 @@ local PATH_TOOLS = {
   { cmd = "tree-sitter", why = "compiling treesitter parsers (the main branch needs it)", fix = "brew install tree-sitter-cli", required = true },
   { cmd = "lazygit",     why = "<leader>gg, the main git interface",                  fix = "brew install lazygit",         required = true },
   { cmd = "gh",          why = "pull requests (<leader>p) and Actions (<leader>A)",   fix = "brew install gh",              required = true },
+  { cmd = "jira",        why = "the whole <leader>j Jira layer",                      fix = "brew install ankitpokhrel/jira-cli/jira-cli", required = false },
   { cmd = "git",         why = "everything git-related",                              fix = "xcode-select --install",       required = true },
   { cmd = "terraform",   why = "terraform-ls hover and fmt on save",                  fix = "brew install hashicorp/tap/terraform", required = false },
   { cmd = "node",        why = "the Angular language server and every JS tool",       fix = "brew install node",            required = false },
@@ -46,10 +47,11 @@ function M.check()
   ---------------------------------------------------------------------------
   local v = vim.version()
   local version = ("%d.%d.%d"):format(v.major, v.minor, v.patch)
-  if vim.fn.has("nvim-0.11") == 1 then
-    health.ok("Neovim " .. version .. " (0.11+ required for vim.lsp.config)")
+  if vim.fn.has("nvim-0.12") == 1 then
+    health.ok("Neovim " .. version .. " (0.12+ required)")
   else
-    health.error("Neovim " .. version .. " is too old — this config uses vim.lsp.config",
+    health.error("Neovim " .. version .. " is too old — this config uses vim.lsp.config "
+      .. "and vim.lsp.document_color, and assumes vim.diagnostic.disable is gone",
       { "brew upgrade neovim" })
   end
 
@@ -127,13 +129,58 @@ function M.check()
   else
     health.warn("termguicolors is off; colours will look wrong")
   end
-  -- snacks.image only speaks the Kitty graphics protocol.
-  local term = (vim.env.TERM_PROGRAM or ""):lower()
-  if term:match("ghostty") or term:match("wezterm") or vim.env.KITTY_WINDOW_ID then
-    health.ok("This terminal can render images inside the buffer")
+
+  ---------------------------------------------------------------------------
+  health.start("Jira")
+  ---------------------------------------------------------------------------
+  -- Four independent parts, each of which fails as an unhelpful CLI error if
+  -- you only find out about it at <leader>js. Checked in dependency order and
+  -- stopped at the first break, so the report names one thing to fix.
+  local jira = require("config.jira")
+
+  if vim.fn.executable("jira") == 0 then
+    health.info("jira-cli not installed — the <leader>j keys are inert, "
+      .. "everything else works normally.",
+      { "brew bundle --file=~/.config/nvim/Brewfile" })
+  elseif vim.fn.filereadable(jira.CONFIG) == 0 then
+    health.warn("jira-cli is installed but not configured",
+      { "Run: jira init",
+        "Cloud · https://<your-site>.atlassian.net · your login · pick a project and board",
+        "It writes " .. vim.fn.fnamemodify(jira.CONFIG, ":~") .. ", outside this repo." })
   else
-    health.info("Images can't render in-buffer here (needs kitty, ghostty or wezterm). "
-      .. "Use macOS Quick Look instead.")
+    local account = jira.login()
+    if not account then
+      health.warn("No `login:` line in " .. vim.fn.fnamemodify(jira.CONFIG, ":~"),
+        { "Re-run: jira init" })
+    else
+      health.ok("Configured as " .. account)
+
+      -- Presence only. The value is never read into the report, and never
+      -- printed anywhere: :checkhealth output gets pasted into tickets.
+      local found = vim.system(
+        { "security", "find-generic-password", "-s", jira.SERVICE, "-a", account },
+        { text = true }
+      ):wait()
+
+      if found.code ~= 0 then
+        health.error("No API token in the Keychain for " .. account,
+          { "security add-generic-password -s " .. jira.SERVICE
+            .. " -a " .. account .. " -U -w",
+            "It prompts for the token without echoing it.",
+            "Create one at https://id.atlassian.com/manage-profile/security/api-tokens" })
+      else
+        health.ok("API token present in the Keychain (service: " .. jira.SERVICE .. ")")
+
+        local issues, err = jira.sprint_issues()
+        if issues then
+          health.ok(("Reached Jira — %d issue(s) in the current sprint"):format(#issues))
+        else
+          health.error("jira-cli could not read the current sprint",
+            { vim.split(err or "", "\n")[1] or "unknown error",
+              "Check the token is still valid, and that the configured board has an active sprint." })
+        end
+      end
+    end
   end
 
   ---------------------------------------------------------------------------
