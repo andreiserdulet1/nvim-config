@@ -74,16 +74,7 @@ end
 
 -- Read-only output into a scratch buffer, so it can be searched and yanked.
 local function show_output(title, text, ft)
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
-  vim.bo[buf].modifiable = false
-  vim.bo[buf].filetype = ft or "log"
-  vim.bo[buf].bufhidden = "wipe"
-  vim.cmd("botright vsplit")
-  vim.api.nvim_win_set_buf(0, buf)
-  vim.wo.wrap = false
-  vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, nowait = true })
-  vim.api.nvim_buf_set_name(buf, "gh://" .. title)
+  require("config.scratch").open(title, text, { scheme = "gh", filetype = ft or "log" })
 end
 
 local function in_terminal(cmd, root)

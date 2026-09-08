@@ -308,9 +308,15 @@ logs and watching all work without it.
 ### Jira
 
 `<Space>js` is the current sprint, `<Space>jb` is the board a column at a time,
-`<Space>jm` is your own open issues, `<Space>jf` searches. All four open a
-picker; from inside it you act on the highlighted issue without leaving the
-list:
+`<Space>jm` is your own open issues, `<Space>jf` searches.
+
+All four open a picker with a **preview pane that reads the whole issue** as you
+move down the list — description, every comment, and the fields the board hides:
+sprint, story points, epic, subtasks and linked issues. It is rendered as
+markdown from Jira's own document format rather than scraped from the CLI's
+terminal output, so it re-wraps to whatever width the split happens to be.
+
+From inside the list you act on the highlighted issue without leaving it:
 
 | In the picker | |
 |---|---|
@@ -319,12 +325,12 @@ list:
 | `<C-a>` | assign it |
 | `<C-c>` | comment on it |
 | `<C-o>` | open it in the browser |
-| `<C-v>` | view it, description and comments, in a split |
+| `<C-v>` | open the full issue in its own split, to search and yank |
 
 The columns offered by `<C-t>` are the statuses actually present in the sprint,
 so they are your board's real columns and not a list baked into this repo.
 
-The same five actions have direct keys — `<Space>jv` view, `<Space>jt` move,
+The same five actions have direct keys — `<Space>jv` read, `<Space>jt` move,
 `<Space>ja` assign, `<Space>jc` comment, `<Space>jo` open — and they work out
 which issue you mean from the branch name. On `feature/AWIN-1841-rounding`,
 `<Space>jc` comments on AWIN-1841 without asking. Failing that it reads the key

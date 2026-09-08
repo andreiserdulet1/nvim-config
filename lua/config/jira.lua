@@ -235,27 +235,339 @@ end
 ---------------------------------------------------------------------------
 
 -- Read-only output into a scratch buffer so it can be searched and yanked.
--- Same shape as config/actions.lua's show_output.
 local function show(name, text, ft)
-  local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
-  vim.bo[buf].modifiable = false
-  vim.bo[buf].filetype = ft or "markdown"
-  vim.bo[buf].bufhidden = "wipe"
-  vim.cmd("botright vsplit")
-  vim.api.nvim_win_set_buf(0, buf)
-  vim.wo.wrap = true
-  vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf, nowait = true })
-  pcall(vim.api.nvim_buf_set_name, buf, "jira://" .. name)
+  require("config.scratch").open(name, text,
+    { scheme = "jira", filetype = ft or "markdown", wrap = true })
 end
 
 local function fail(err) vim.notify(err, vim.log.levels.ERROR) end
 
---- Render an issue, description and latest comments included.
+---------------------------------------------------------------------------
+-- Reading an issue
+---------------------------------------------------------------------------
+
+-- Jira Cloud stores descriptions and comments as ADF -- Atlassian Document
+-- Format, a nested JSON tree -- not as text or markdown.
+--
+-- `jira issue view --plain` renders that for a terminal, which was the first
+-- implementation here. Two things were wrong with it in a buffer: it pads
+-- every line out to a fixed 118 columns, so a narrow split reads badly and the
+-- text can never re-wrap; and it omits the fields that actually matter on a
+-- board -- sprint, story points, epic. Both come from rendering ADF directly.
+--
+-- The node set Jira actually emits is small. Anything unrecognised recurses
+-- into its children rather than being dropped, so a node type not handled here
+-- still surfaces its text.
+
+--- Inline nodes: text plus its marks, mentions, emoji, links.
+local function adf_inline(node)
+  local t = node.type
+
+  if t == "text" then
+    local text = node.text or ""
+    for _, m in ipairs(node.marks or {}) do
+      local mt = m.type
+      if mt == "strong" then text = "**" .. text .. "**"
+      elseif mt == "em" then text = "*" .. text .. "*"
+      elseif mt == "code" then text = "`" .. text .. "`"
+      elseif mt == "strike" then text = "~~" .. text .. "~~"
+      elseif mt == "link" and m.attrs and m.attrs.href then
+        text = "[" .. text .. "](" .. m.attrs.href .. ")"
+      end
+    end
+    return text
+  elseif t == "hardBreak" then
+    return "\n"
+  elseif t == "mention" then
+    local name = (node.attrs and (node.attrs.text or node.attrs.displayName)) or "someone"
+    return "@" .. (name:gsub("^@", ""))
+  elseif t == "emoji" then
+    return (node.attrs and (node.attrs.text or node.attrs.shortName)) or ""
+  elseif t == "inlineCard" then
+    return (node.attrs and node.attrs.url) or ""
+  end
+
+  local parts = {}
+  for _, c in ipairs(node.content or {}) do table.insert(parts, adf_inline(c)) end
+  return table.concat(parts)
+end
+
+--- Block nodes, appending markdown lines.
+local function adf_blocks(node, lines, prefix)
+  prefix = prefix or ""
+  local t = node.type
+
+  local function inline_of(n)
+    local parts, prev = {}, nil
+    for _, c in ipairs(n.content or {}) do
+      local piece = adf_inline(c)
+      -- Jira does not always store a space between a mention and the word
+      -- after it, which renders as "@Zohreh Hassaniplease take a look".
+      if prev == "mention" and piece:match("^[%w]") then piece = " " .. piece end
+      table.insert(parts, piece)
+      prev = c.type
+    end
+    return table.concat(parts)
+  end
+
+  if t == "paragraph" then
+    local text = inline_of(node)
+    -- hardBreak came back as a newline; split so each becomes its own line.
+    for _, l in ipairs(vim.split(text, "\n", { plain = true })) do
+      table.insert(lines, prefix .. l)
+    end
+    table.insert(lines, "")
+  elseif t == "heading" then
+    -- Shifted down two levels: the issue summary is the document's H1.
+    local level = math.min(((node.attrs and node.attrs.level) or 1) + 2, 6)
+    table.insert(lines, prefix .. string.rep("#", level) .. " " .. inline_of(node))
+    table.insert(lines, "")
+  elseif t == "bulletList" or t == "orderedList" then
+    local n = 1
+    for _, item in ipairs(node.content or {}) do
+      local marker = t == "bulletList" and "- " or (n .. ". ")
+      local sub = {}
+      for _, c in ipairs(item.content or {}) do adf_blocks(c, sub, "") end
+      while #sub > 0 and sub[#sub] == "" do table.remove(sub) end
+      for i, l in ipairs(sub) do
+        -- An empty continuation line must stay empty; indenting it would leave
+        -- trailing whitespace in the middle of a list.
+        if l == "" then
+          table.insert(lines, "")
+        else
+          table.insert(lines, prefix .. (i == 1 and marker or string.rep(" ", #marker)) .. l)
+        end
+      end
+      n = n + 1
+    end
+    table.insert(lines, "")
+  elseif t == "codeBlock" then
+    table.insert(lines, prefix .. "```" .. ((node.attrs and node.attrs.language) or ""))
+    for _, c in ipairs(node.content or {}) do
+      for _, l in ipairs(vim.split(c.text or "", "\n", { plain = true })) do
+        table.insert(lines, prefix .. l)
+      end
+    end
+    table.insert(lines, prefix .. "```")
+    table.insert(lines, "")
+  elseif t == "blockquote" then
+    local sub = {}
+    for _, c in ipairs(node.content or {}) do adf_blocks(c, sub, "") end
+    while #sub > 0 and sub[#sub] == "" do table.remove(sub) end
+    for _, l in ipairs(sub) do table.insert(lines, prefix .. "> " .. l) end
+    table.insert(lines, "")
+  elseif t == "rule" then
+    table.insert(lines, prefix .. "---")
+    table.insert(lines, "")
+  elseif t == "mediaSingle" or t == "mediaGroup" then
+    table.insert(lines, prefix .. "_[attachment]_")
+    table.insert(lines, "")
+  else
+    -- doc, table, and anything Atlassian adds later: keep walking so the text
+    -- inside is never silently lost.
+    for _, c in ipairs(node.content or {}) do adf_blocks(c, lines, prefix) end
+  end
+end
+
+--- Render an ADF document to markdown lines.
+---@param doc table|nil
+---@return string[]
+function M.adf(doc)
+  if type(doc) ~= "table" then return {} end
+  local lines = {}
+  adf_blocks(doc, lines, "")
+  for i, l in ipairs(lines) do lines[i] = (l:gsub("%s+$", "")) end
+  while #lines > 0 and lines[#lines] == "" do table.remove(lines) end
+  return lines
+end
+
+-- Custom field ids differ per Jira instance, so they are resolved by NAME from
+-- jira-cli's own config rather than hardcoded -- which also keeps this repo
+-- free of one more Awin-specific number. Several projects here declare fields
+-- with the same name, hence a list of candidate ids per name and "first one
+-- that is actually set on this issue wins".
+local custom_fields_cache
+
+local function custom_fields()
+  if custom_fields_cache then return custom_fields_cache end
+
+  local ok, lines = pcall(vim.fn.readfile, CONFIG)
+  -- Deliberately not cached on failure. readfile can fail for a reason that
+  -- goes away -- being called from the wrong context, say -- and caching the
+  -- empty result would silently drop Sprint and points for the whole session.
+  if not ok then return {} end
+
+  local map = {}
+  local pending
+  for _, line in ipairs(lines) do
+    local name = line:match("^%s*%-?%s*name:%s*(.+)$")
+    local field = line:match("^%s*key:%s*(customfield_%d+)%s*$")
+    if name then
+      pending = vim.trim(name):gsub("^['\"]", ""):gsub("['\"]$", "")
+    elseif field and pending then
+      local lower = pending:lower()
+      map[lower] = map[lower] or {}
+      table.insert(map[lower], field)
+      pending = nil
+    end
+  end
+
+  custom_fields_cache = map
+  return map
+end
+
+--- First non-nil value among the fields registered under any of `names`.
+local function custom(fields, names)
+  local map = custom_fields()
+  for _, name in ipairs(names) do
+    for _, id in ipairs(map[name:lower()] or {}) do
+      if fields[id] ~= nil then return fields[id] end
+    end
+  end
+  return nil
+end
+
+local function short_date(iso)
+  local y, mo, d = tostring(iso):match("(%d+)-(%d+)-(%d+)")
+  if not y then return "" end
+  return os.date("%d %b %Y", os.time({ year = y, month = mo, day = d, hour = 12 }))
+end
+
+--- Everything about an issue, as markdown lines.
+---
+--- Split from the fetch so the picker's previewer can render an async response
+--- through exactly the same code as <leader>jv, rather than a second, subtly
+--- different renderer that drifts.
+---@param out string  the raw JSON of one issue
+---@return string[]|nil lines
+function M.detail_from_json(out)
+  local ok, issue = pcall(vim.json.decode, out, { luanil = { object = true } })
+  if not ok or type(issue) ~= "table" or not issue.fields then return nil end
+  local f = issue.fields
+  local key = issue.key or ""
+
+  local function name_of(v) return type(v) == "table" and (v.name or v.displayName) or nil end
+
+  -- Sprint is an array of sprint objects; the one you care about is the last,
+  -- since a carried-over issue lists every sprint it has been in.
+  local sprints = custom(f, { "Sprint" })
+  local sprint
+  if type(sprints) == "table" and #sprints > 0 then
+    sprint = name_of(sprints[#sprints]) or tostring(sprints[#sprints])
+  end
+
+  local points = custom(f, { "Story Points", "Story point estimate", "Story points" })
+  local epic_key = custom(f, { "Epic Link" })
+  local parent = f.parent
+
+  local lines = {
+    "# " .. key .. " · " .. (f.summary or ""),
+    "",
+  }
+
+  -- One dense status line, then the rest as a label/value block.
+  local badge = {}
+  for _, v in ipairs({
+    name_of(f.issuetype), name_of(f.status), name_of(f.priority),
+    points and (tostring(points):gsub("%.0$", "") .. " points") or nil,
+  }) do
+    if v and v ~= "" then table.insert(badge, v) end
+  end
+  table.insert(lines, "`" .. table.concat(badge, "`  `") .. "`")
+  table.insert(lines, "")
+
+  local function row(label, value)
+    if value and value ~= "" then
+      table.insert(lines, string.format("%-10s %s", label, value))
+    end
+  end
+
+  row("Sprint", sprint)
+  if parent then
+    row("Epic", (parent.key or "") .. "  " .. ((parent.fields and parent.fields.summary) or ""))
+  elseif epic_key then
+    row("Epic", epic_key)
+  end
+  row("Assignee", name_of(f.assignee) or "Unassigned")
+  row("Reporter", name_of(f.reporter))
+  row("Created", short_date(f.created))
+  row("Updated", short_date(f.updated))
+  if f.labels and #f.labels > 0 then row("Labels", table.concat(f.labels, ", ")) end
+  if f.components and #f.components > 0 then
+    local names = {}
+    for _, c in ipairs(f.components) do table.insert(names, c.name or "") end
+    row("Components", table.concat(names, ", "))
+  end
+
+  for _, sub in ipairs(f.subtasks or {}) do
+    row("Subtask", (sub.key or "") .. "  "
+      .. ((sub.fields and sub.fields.summary) or "")
+      .. "  [" .. (name_of(sub.fields and sub.fields.status) or "?") .. "]")
+  end
+
+  for _, link in ipairs(f.issuelinks or {}) do
+    local other = link.outwardIssue or link.inwardIssue
+    if other then
+      local rel = link.type
+        and (link.outwardIssue and link.type.outward or link.type.inward)
+        or "relates to"
+      row("Link", rel .. " " .. (other.key or "") .. "  "
+        .. ((other.fields and other.fields.summary) or ""))
+    end
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, "## Description")
+  table.insert(lines, "")
+  local desc = M.adf(f.description)
+  if #desc == 0 then
+    table.insert(lines, "_No description._")
+  else
+    vim.list_extend(lines, desc)
+  end
+
+  local comments = (f.comment and f.comment.comments) or {}
+  if #comments > 0 then
+    table.insert(lines, "")
+    table.insert(lines, ("## Comments (%d)"):format(f.comment.total or #comments))
+    for _, c in ipairs(comments) do
+      table.insert(lines, "")
+      table.insert(lines, ("### %s · %s"):format(
+        name_of(c.author) or "Unknown", short_date(c.created)))
+      table.insert(lines, "")
+      local body = M.adf(c.body)
+      if #body == 0 then
+        table.insert(lines, "_(empty)_")
+      else
+        vim.list_extend(lines, body)
+      end
+    end
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, "---")
+  table.insert(lines, "")
+  local site = (issue.self or ""):match("^(https://[^/]+)") or ""
+  table.insert(lines, site .. "/browse/" .. key)
+
+  return lines
+end
+
+--- Fetch one issue and render it.
+---@return string[]|nil lines, string|nil err
+function M.detail(key)
+  local out, err = jira({ "issue", "view", key, "--raw", "--comments", "50" })
+  if not out then return nil, err end
+  local lines = M.detail_from_json(out)
+  if not lines then return nil, "Could not parse " .. key end
+  return lines
+end
+
+--- Render an issue into a buffer: metadata, description, every comment.
 function M.view(key)
-  local out, err = jira({ "issue", "view", key, "--plain", "--comments", "10" })
-  if not out then fail(err) return end
-  show(key, out)
+  local lines, err = M.detail(key)
+  if not lines then fail(err) return end
+  show(key, table.concat(lines, "\n"))
 end
 
 --- Open the issue in a browser.
@@ -436,6 +748,85 @@ end
 --- Show a list of issues, with the actions bound to control keys.
 ---@param title string
 ---@param issues table[]
+-- Details already fetched this session, keyed by issue key. Moving back up the
+-- list must not re-request, and a fetch that lands after you have moved on
+-- must not overwrite the pane you are now looking at.
+local detail_cache = {}
+
+--- Fetch an issue's detail without blocking the picker.
+---
+--- The synchronous M.detail is fine for <leader>jv, where you asked for one
+--- issue and can wait. It is wrong here: the previewer runs on every cursor
+--- move, and :wait() would freeze the picker for the length of an HTTP call
+--- each time you press j.
+local function detail_async(key, callback)
+  if detail_cache[key] then
+    callback(detail_cache[key])
+    return
+  end
+
+  local tok = token()
+  if not tok then
+    callback({ "Not authenticated — see :checkhealth nvim-config" })
+    return
+  end
+
+  vim.system(
+    { "jira", "issue", "view", key, "--raw", "--comments", "50" },
+    { text = true, env = { JIRA_API_TOKEN = tok } },
+    function(res)
+      -- Everything below has to be inside vim.schedule. A vim.system callback
+      -- runs in a fast event context, where vim.fn.* is forbidden, and the
+      -- renderer reads jira-cli's config with vim.fn.readfile to resolve
+      -- custom field ids. Parsing out here silently lost the Sprint and story
+      -- point rows -- and cached the broken result for the whole session.
+      vim.schedule(function()
+        local lines
+        if res.code ~= 0 then
+          lines = { "Could not load " .. key, "", vim.trim(res.stderr or "") }
+        else
+          lines = M.detail_from_json(res.stdout or "") or { "Could not parse " .. key }
+        end
+        detail_cache[key] = lines
+        callback(lines)
+      end)
+    end
+  )
+end
+
+--- A preview pane showing the issue under the cursor.
+local function detail_previewer()
+  local previewers = require("telescope.previewers")
+
+  return previewers.new_buffer_previewer({
+    title = "Issue",
+    define_preview = function(self, entry)
+      local buf = self.state.bufnr
+      local issue = entry.value
+
+      -- Something readable immediately, so the pane is never blank while the
+      -- request is in flight.
+      vim.bo[buf].filetype = "markdown"
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+        "# " .. issue.key .. " · " .. issue.summary,
+        "",
+        "`" .. issue.status .. "`  `" .. issue.assignee .. "`",
+        "",
+        "_Loading…_",
+      })
+
+      detail_async(issue.key, function(lines)
+        -- The cursor may have moved on while this was in flight; only paint if
+        -- this preview buffer is still showing the issue we asked about.
+        if not vim.api.nvim_buf_is_valid(buf) then return end
+        local current = self.state and self.state.bufnr
+        if current ~= buf then return end
+        pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, lines)
+      end)
+    end,
+  })
+end
+
 function M.pick(title, issues)
   local pickers = require("telescope.pickers")
   local finders = require("telescope.finders")
@@ -474,6 +865,7 @@ function M.pick(title, issues)
       end,
     }),
     sorter = conf.generic_sorter({}),
+    previewer = detail_previewer(),
     attach_mappings = function(_, map)
       actions.select_default:replace(act(menu))
       for _, mode in ipairs({ "i", "n" }) do
