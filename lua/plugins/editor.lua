@@ -1,14 +1,16 @@
 -- Finding things, moving around, and the file tree.
 return {
 
-  -- Telescope: the fuzzy finder everything routes through -------------------
+  -- Telescope: the fuzzy finder every <leader>f key routes through ----------
+  -- vim.ui.select is NOT its job any more -- snacks.picker's ui_select handles
+  -- that (see plugins/ui.lua), which retired telescope-ui-select, dormant
+  -- upstream since December 2023.
   {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
     dependencies = {
       "nvim-lua/plenary.nvim",
       { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-      "nvim-telescope/telescope-ui-select.nvim",
     },
     keys = {
       { "<leader><space>", "<cmd>Telescope find_files<cr>", desc = "Find file" },
@@ -56,16 +58,12 @@ return {
           find_files = { hidden = true },
           buffers = { mappings = { i = { ["<C-d>"] = actions.delete_buffer } } },
         },
-        extensions = {
-          ["ui-select"] = { require("telescope.themes").get_dropdown() },
-        },
       }
     end,
     config = function(_, opts)
       local telescope = require("telescope")
       telescope.setup(opts)
       pcall(telescope.load_extension, "fzf")
-      pcall(telescope.load_extension, "ui-select")
     end,
   },
 
@@ -164,6 +162,7 @@ return {
         { "<leader>m", group = "multi-cursor" },
         { "<leader>s", group = "search / replace" },
         { "<leader>p", group = "pull requests" },
+        { "<leader>j", group = "jira" },
         { "<leader>A", group = "github actions" },
         { "<leader>q", group = "session / quit" },
         { "<leader>w", group = "window" },
@@ -217,8 +216,8 @@ return {
     config = function()
       require("mini.pairs").setup()      -- auto-close brackets and quotes
       require("mini.surround").setup()   -- gsa/gsd/gsr to add/delete/replace surroundings
-      require("mini.comment").setup()    -- gcc to comment a line, gc in visual mode
       require("mini.ai").setup()         -- better text objects: cif, daf, ci(, etc.
+      -- No mini.comment: gc / gcc are built into Neovim from 0.10 onwards.
     end,
   },
 
@@ -328,4 +327,22 @@ return {
       })
     end,
   },
+
+  -- Undo history you can see -------------------------------------------------
+  -- `undofile` is on, so history already survives restarts. This makes it
+  -- visible and navigable, including branches -- the reassurance that matters
+  -- after you have just mangled a file.
+  {
+    "mbbill/undotree",
+    cmd = { "UndotreeToggle", "UndotreeShow" },
+    keys = {
+      { "<leader>uu", "<cmd>UndotreeToggle<cr>", desc = "Toggle undo tree" },
+    },
+    init = function()
+      vim.g.undotree_WindowLayout = 2
+      vim.g.undotree_SplitWidth = 34
+      vim.g.undotree_SetFocusWhenToggle = 1
+    end,
+  },
+
 }

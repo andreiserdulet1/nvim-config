@@ -225,14 +225,6 @@ function M.highlights(p)
     GitSignsDeleteInline = { bg = p.delete_bg },
     GitSignsCurrentLineBlame = { fg = p.gutter, italic = true },
 
-    -- git-conflict: the three regions must be tellable apart at a glance
-    GitConflictCurrent      = { bg = p.add_bg },
-    GitConflictIncoming     = { bg = p.change_bg },
-    GitConflictAncestor     = { bg = p.raised },
-    GitConflictCurrentLabel = { bg = p.add_bg, fg = p.add_fg, bold = true },
-    GitConflictIncomingLabel = { bg = p.change_bg, fg = p.change_fg, bold = true },
-    GitConflictAncestorLabel = { bg = p.raised, fg = p.dim, bold = true },
-
     ----------------------------------------------------------------------
     -- Plugins that do not link sensibly to the base groups
     ----------------------------------------------------------------------

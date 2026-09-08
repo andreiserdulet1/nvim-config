@@ -1,15 +1,12 @@
 -- Colourscheme switching and persistence.
 --
--- The families below exist because the themes split light and dark two
--- different ways, and one toggle has to cope with both:
+-- Both surviving themes read `vim.o.background`, so <leader>ut flips that and
+-- re-applies the same name. The `by_background` field on a family is what says
+-- so; it exists because the four themes dropped in f5f26fb (catppuccin,
+-- rose-pine, kanagawa, cyberdream) exposed their light and dark variants as
+-- separate colourscheme NAMES instead, and a future addition might again.
 --
---   * tokyonight and cyberdream read `vim.o.background`, so flipping that and
---     re-applying the same name is enough.
---   * catppuccin, rose-pine and kanagawa expose their variants as separate
---     colourscheme NAMES, so switching means changing the name.
---
--- tokyonight is the default: the web guide's palette was hand-derived from it,
--- so the editor and the page match.
+-- graphite is the default and ships in this repo (colors/graphite.lua).
 
 local M = {}
 
@@ -35,27 +32,18 @@ M.default = "graphite"
 M.current = nil
 
 local STATE = vim.fn.stdpath("data") .. "/theme"
-local LEGACY = vim.fn.stdpath("data") .. "/theme-background"
 
---- Read the saved preference. Understands the older single-line file that only
---- held light/dark, so an existing choice is not silently discarded.
+--- Read the saved preference: colourscheme on line one, background on line two.
 ---@return string|nil colorscheme, string|nil background
 function M.load_saved()
-  if vim.fn.filereadable(STATE) == 1 then
-    local lines = vim.fn.readfile(STATE)
-    local scheme = lines[1] and vim.trim(lines[1]) or nil
-    local bg = lines[2] and vim.trim(lines[2]) or nil
-    if scheme == "" then scheme = nil end
-    if bg ~= "dark" and bg ~= "light" then bg = nil end
-    return scheme, bg
-  end
+  if vim.fn.filereadable(STATE) == 0 then return nil, nil end
 
-  if vim.fn.filereadable(LEGACY) == 1 then
-    local bg = vim.trim(vim.fn.readfile(LEGACY)[1] or "")
-    if bg == "dark" or bg == "light" then return nil, bg end
-  end
-
-  return nil, nil
+  local lines = vim.fn.readfile(STATE)
+  local scheme = lines[1] and vim.trim(lines[1]) or nil
+  local bg = lines[2] and vim.trim(lines[2]) or nil
+  if scheme == "" then scheme = nil end
+  if bg ~= "dark" and bg ~= "light" then bg = nil end
+  return scheme, bg
 end
 
 local function save(scheme, bg)
@@ -100,12 +88,6 @@ function M.apply(name, bg)
   return true
 end
 
---- Restore whatever was saved, falling back to tokyonight dark.
-function M.restore()
-  local scheme, bg = M.load_saved()
-  M.apply(scheme or M.default, bg or "dark")
-end
-
 --- Flip between the light and dark side of the current family.
 function M.toggle_background()
   local current = M.current or vim.g.colors_name or M.default
@@ -130,20 +112,6 @@ function M.toggle_background()
     M.apply(target)
     vim.notify(target)
   end
-end
-
---- Every variant this config knows about, for a picker.
-function M.names()
-  local seen, out = {}, {}
-  for _, f in ipairs(M.families) do
-    for _, n in ipairs({ f.dark, f.light }) do
-      if not seen[n] then
-        seen[n] = true
-        table.insert(out, n)
-      end
-    end
-  end
-  return out
 end
 
 return M

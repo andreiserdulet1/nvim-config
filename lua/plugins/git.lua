@@ -1,4 +1,11 @@
--- Git: lazygit for anything involved, gitsigns for hunks, diffview for review.
+-- Git: lazygit for anything involved, gitsigns for hunks, diffview for review
+-- and for merge conflicts.
+--
+-- git-conflict.nvim used to handle in-buffer conflict resolution. It was
+-- dropped: upstream went quiet in December 2024, and its disable_diagnostics
+-- path calls vim.diagnostic.disable(), which Neovim 0.12 removed, so it needed
+-- a hand-rolled workaround here to be usable at all. Diffview's 3-pane merge
+-- view (<leader>gx) does the same job with the same keys.
 return {
 
   -- lazygit in a floating window. This is the "smart git command" -----------
@@ -42,13 +49,18 @@ return {
 
         map("n", "]h", function() gs.nav_hunk("next") end, "Next hunk")
         map("n", "[h", function() gs.nav_hunk("prev") end, "Previous hunk")
-        map({ "n", "v" }, "<leader>ghs", ":Gitsigns stage_hunk<CR>", "Stage hunk")
+        -- stage_hunk toggles: on an unstaged hunk it stages, on a staged sign
+        -- it unstages. That replaces the old undo_stage_hunk, which gitsigns
+        -- now marks @deprecated.
+        map({ "n", "v" }, "<leader>ghs", ":Gitsigns stage_hunk<CR>", "Stage / unstage hunk")
         map({ "n", "v" }, "<leader>ghr", ":Gitsigns reset_hunk<CR>", "Reset hunk")
-        map("n", "<leader>ghu", gs.undo_stage_hunk, "Undo stage hunk")
         map("n", "<leader>ghp", gs.preview_hunk_inline, "Preview hunk")
         map("n", "<leader>gb", function() gs.blame_line({ full = true }) end, "Blame line")
         map("n", "<leader>gB", function() gs.blame() end, "Blame file")
-        map("n", "<leader>ub", gs.toggle_current_line_blame, "Toggle inline blame")
+        -- <leader>ug, not <leader>ub: buffer-local maps beat global ones, and
+        -- <leader>ub is the background-painting picker in config/keymaps.lua.
+        -- Mapping it here shadowed that picker in every file in a git repo.
+        map("n", "<leader>ug", gs.toggle_current_line_blame, "Toggle inline blame")
         -- ih is a text object: `dih` deletes the hunk under the cursor.
         map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
       end,
@@ -81,80 +93,6 @@ return {
       { "<leader>pi", "<cmd>Octo issue list<cr>", desc = "Issues" },
       { "<leader>ps", "<cmd>Octo search<cr>", desc = "Search PRs and issues" },
     },
-  },
-
-  -- In-buffer conflict resolution -------------------------------------------
-  -- For a two-line conflict, opening a separate diff view is heavier than the
-  -- job needs. This resolves conflicts in the file you are already looking at.
-  --
-  -- default_mappings is off on purpose: the plugin's defaults are co/ct/cb, and
-  -- `ct` is a real operator-motion (ct) = "change up to the next paren"). Having
-  -- that silently change meaning inside a conflicted buffer would be a trap.
-  -- The keys below match diffview's merge-view keys instead, so conflicts use
-  -- one set of keys wherever you meet them.
-  {
-    "akinsho/git-conflict.nvim",
-    version = "*",
-    event = "BufReadPre",
-    opts = {
-      default_mappings = false,
-      default_commands = true,
-      -- Left off deliberately: the plugin's own implementation calls
-      -- vim.diagnostic.disable(), which Neovim 0.12 removed, so enabling this
-      -- throws on every conflicted buffer. Handled with the current API below.
-      disable_diagnostics = false,
-      highlights = {
-        current = "DiffAdd",
-        incoming = "DiffText",
-        ancestor = "DiffChange",
-      },
-    },
-    config = function(_, opts)
-      require("git-conflict").setup(opts)
-
-      vim.api.nvim_create_autocmd("User", {
-        pattern = "GitConflictDetected",
-        callback = function(ev)
-          local buf = ev.buf or 0
-          local function map(lhs, rhs, desc)
-            vim.keymap.set("n", lhs, rhs, { buffer = buf, desc = desc })
-          end
-          map("<leader>co", "<cmd>GitConflictChooseOurs<cr>", "Conflict: take ours")
-          map("<leader>ct", "<cmd>GitConflictChooseTheirs<cr>", "Conflict: take theirs")
-          map("<leader>cb", "<cmd>GitConflictChooseBoth<cr>", "Conflict: take both")
-          map("<leader>cn", "<cmd>GitConflictChooseNone<cr>", "Conflict: take neither")
-          map("]x", "<cmd>GitConflictNextConflict<cr>", "Next conflict")
-          map("[x", "<cmd>GitConflictPrevConflict<cr>", "Previous conflict")
-
-          -- Relabel the <leader>c menu while a conflict is present, so which-key
-          -- doesn't advertise "code" when these keys mean something else.
-          pcall(function()
-            require("which-key").add({ "<leader>c", group = "conflict", buffer = buf })
-          end)
-
-          -- A conflicted file isn't valid TypeScript, so its diagnostics are
-          -- noise until the markers are gone.
-          vim.diagnostic.enable(false, { bufnr = buf })
-
-          vim.notify("Conflicts in this file — <leader>co / ct / cb, ]x to move",
-            vim.log.levels.WARN)
-        end,
-      })
-
-      vim.api.nvim_create_autocmd("User", {
-        pattern = "GitConflictResolved",
-        callback = function(ev)
-          local buf = ev.buf or 0
-          for _, lhs in ipairs({ "<leader>co", "<leader>ct", "<leader>cb", "<leader>cn", "]x", "[x" }) do
-            pcall(vim.keymap.del, "n", lhs, { buffer = buf })
-          end
-          vim.diagnostic.enable(true, { bufnr = buf })
-          pcall(function()
-            require("which-key").add({ "<leader>c", group = "code", buffer = buf })
-          end)
-        end,
-      })
-    end,
   },
 
   -- Diffview: review a whole branch or PR inside Neovim ----------------------

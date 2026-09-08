@@ -103,8 +103,8 @@ function M.pick()
     return
   end
 
-  -- vim.ui.select is routed through telescope-ui-select, so this matches every
-  -- other picker in the config.
+  -- vim.ui.select is routed through snacks.picker, so this matches every other
+  -- picker in the config.
   vim.ui.select(names, {
     prompt = "yarn — " .. vim.fn.fnamemodify(proj.root, ":t"),
     format_item = function(name)
