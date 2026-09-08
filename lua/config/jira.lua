@@ -174,7 +174,14 @@ local function fetch(args)
 end
 
 --- Issues in the board's current sprint.
-function M.sprint_issues() return fetch({ "sprint", "list", "--current", "--raw" }) end
+---
+--- Via `issue list`, not `sprint list --current`: the latter ignores --raw and
+--- prints its plain table anyway, which is not something to parse. The JQL
+--- returns exactly the same set -- jira-cli scopes -q to the configured
+--- project, and openSprints() to the sprints currently running in it.
+function M.sprint_issues()
+  return fetch({ "issue", "list", "-q", "sprint in openSprints()", "--raw" })
+end
 
 --- Your own issues that aren't done yet. `jira me` prints the same login that
 --- M.login() reads out of the config file, so there is no second call to make.
