@@ -236,7 +236,7 @@ M.sections = {
       { "<leader>ql", "Restore the last session" },
       { "<leader>;", "Jump via the breadcrumb bar" },
       { "<leader>ut", "Flip light / dark for the current theme" },
-      { "<leader>uT", "Pick a theme (graphite or tokyonight)" },
+      { "<leader>uT", "Pick a theme (graphite, heather, malachite)" },
       { "<leader>ub", "Pick a background painting, or turn it off" },
       { "<leader>um", "Toggle markdown rendering" },
       { "<leader>uc", "Toggle colour swatches" },

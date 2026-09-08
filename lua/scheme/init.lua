@@ -1,11 +1,14 @@
--- Graphite: highlight construction.
+-- The colourscheme engine, shared by every theme in lua/scheme/palettes/.
 --
 -- Roughly a hundred base groups are defined here and Neovim's own default
 -- links carry the rest -- a session has 827 live highlight groups and 160
 -- treesitter captures, so defining every one by hand would be unmaintainable
 -- and would drift the moment a plugin changed.
 --
--- The hue assignment is the actual design decision, and it is deliberate:
+-- A palette supplies colours by ROLE, not by name. The role names read as
+-- colours because they were named for Graphite, the first theme built here,
+-- but every theme fills the same slots and the hue assignment below is the
+-- actual design decision:
 --
 --   amber  functions and methods -- what you scan a file for
 --   clay   keywords and control flow
@@ -15,6 +18,10 @@
 --   text   variables and properties, left uncoloured to keep the noise down
 --
 -- Operators and punctuation get dim text rather than a hue of their own.
+--
+-- A theme with fewer source hues than roles -- which is every theme here --
+-- doubles up within a hue and separates the pair by lightness instead. That is
+-- why Graphite's amber and ochre are both warm.
 
 local M = {}
 
@@ -430,7 +437,7 @@ function M.highlights(p)
   -- text to be unambiguous, and a solid `surface` behind them costs nothing
   -- visually. CursorLine keeps its fill too, which gives a clean band under the
   -- line being edited.
-  if vim.g.graphite_transparent then
+  if vim.g.scheme_transparent then
     groups.Normal.bg = none
     groups.NormalNC.bg = none
     groups.TabLineFill.bg = none
@@ -445,23 +452,29 @@ function M.highlights(p)
   return groups
 end
 
---- Apply Graphite for the current `background`.
-function M.load()
-  local palette = require("graphite.palette").get()
+--- Apply a theme for the current `background`.
+---@param name string  a module under lua/scheme/palettes/
+function M.load(name)
+  local ok, palettes = pcall(require, "scheme.palettes." .. name)
+  if not ok then
+    vim.notify("No such colourscheme: " .. name, vim.log.levels.ERROR)
+    return
+  end
+  local palette = palettes.get()
 
   -- A background painting lifts the ground colour, which costs comments most of
   -- their contrast margin. Swapping the palette entry rather than the handful
   -- of highlight groups means every group that reads `comment` -- Comment,
   -- @comment, NeoTreeGitUntracked, the dashboard footer and a dozen others --
   -- follows automatically and cannot drift apart.
-  if vim.g.graphite_transparent then
+  if vim.g.scheme_transparent then
     palette = vim.tbl_extend("force", palette, { comment = palette.comment_on_painting })
   end
 
   if vim.g.colors_name then vim.cmd("hi clear") end
   if vim.fn.exists("syntax_on") == 1 then vim.cmd("syntax reset") end
 
-  vim.g.colors_name = "graphite"
+  vim.g.colors_name = name
   vim.o.termguicolors = true
 
   for group, spec in pairs(M.highlights(palette)) do

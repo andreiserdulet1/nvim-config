@@ -1,127 +1,10 @@
 -- Colours, statusline, buffer tabs, and the start screen.
 return {
 
-  -- Colorscheme ------------------------------------------------------------
-  -- These are the exact tokens from the web guide, mapped onto Neovim. The
-  -- guide's dark palette was derived from tokyonight in the first place, so
-  -- dark is a close cousin of stock storm; the light palette is custom and has
-  -- no stock equivalent, which is why both are spelled out here.
-  --
-  -- Layering follows the page: the editor body is the page ground (bg), and
-  -- floats, popups and the statusline sit on the raised surface.
-  {
-    "folke/tokyonight.nvim",
-    priority = 1000,   -- load before everything else so there's no flash
-    opts = {
-      style = "night",
-      light_style = "day",
-      -- Follow graphite, so switching schemes doesn't switch the painting off.
-      -- `styles.floats`/`sidebars` stay "normal" below on purpose: tokyonight's
-      -- transparent mode would otherwise strip float backgrounds too, and
-      -- readable popups are worth more than a painting behind a hover window.
-      transparent = vim.g.graphite_transparent or false,
-      styles = {
-        comments = { italic = true },
-        keywords = { italic = false },
-        floats = "normal",
-        sidebars = "normal",
-      },
-      on_colors = function(c)
-        if vim.o.background == "light" then
-          c.bg            = "#e9ebf2"   -- --bg        page ground
-          c.bg_dark       = "#dde1ec"   -- --rule-soft
-          c.bg_float      = "#ffffff"   -- --surface
-          c.bg_popup      = "#ffffff"
-          c.bg_sidebar    = "#f2f4f9"   -- --surface-2
-          c.bg_statusline = "#ffffff"
-          c.bg_highlight  = "#dce3f4"   -- --accent-lo
-          c.bg_visual     = "#ccd1e0"   -- --rule
-          c.bg_search     = "#dce3f4"
-          c.fg            = "#1a1b26"   -- --ink
-          c.fg_dark       = "#3b3f52"   -- --ink-soft
-          c.fg_sidebar    = "#3b3f52"
-          c.fg_float      = "#1a1b26"
-          c.fg_gutter     = "#ccd1e0"
-          c.comment       = "#5f6683"   -- --muted
-          c.border        = "#ccd1e0"   -- --rule
-          c.border_highlight = "#34548a"
-          c.blue          = "#34548a"   -- --accent
-          c.blue1         = "#34548a"
-          c.cyan          = "#33635c"
-          c.teal          = "#33635c"
-          c.purple        = "#6a4fa3"   -- --violet
-          c.magenta       = "#6a4fa3"
-          c.green         = "#4a7a2e"   -- --green
-          c.yellow        = "#8a6414"   -- --amber
-          c.orange        = "#8a6414"
-          c.red           = "#a1425a"   -- --red
-          c.error         = "#a1425a"
-          c.warning       = "#8a6414"
-          c.info          = "#34548a"
-          c.hint          = "#33635c"
-        else
-          c.bg            = "#15161e"   -- --bg        page ground
-          c.bg_dark       = "#101017"
-          c.bg_float      = "#1a1b26"   -- --surface
-          c.bg_popup      = "#1a1b26"
-          c.bg_sidebar    = "#1a1b26"
-          c.bg_statusline = "#1a1b26"
-          c.bg_highlight  = "#1f2130"   -- --surface-2
-          c.bg_visual     = "#2c3048"   -- --rule
-          c.bg_search     = "#1e2740"   -- --accent-lo
-          c.fg            = "#c8d3f5"   -- --ink
-          c.fg_dark       = "#a9b3d9"   -- --ink-soft
-          c.fg_sidebar    = "#a9b3d9"
-          c.fg_float      = "#c8d3f5"
-          c.fg_gutter     = "#2c3048"
-          c.comment       = "#787f99"   -- --muted
-          c.border        = "#2c3048"   -- --rule
-          c.border_highlight = "#7aa2f7"
-          c.blue          = "#7aa2f7"   -- --accent
-          c.blue1         = "#7aa2f7"
-          c.purple        = "#bb9af7"   -- --violet
-          c.magenta       = "#bb9af7"
-          c.green         = "#9ece6a"   -- --green
-          c.yellow        = "#e0af68"   -- --amber
-          c.orange        = "#e0af68"
-          c.red           = "#f7768e"   -- --red
-          c.error         = "#f7768e"
-          c.warning       = "#e0af68"
-          c.info          = "#7aa2f7"
-        end
-      end,
-      on_highlights = function(hl, c)
-        -- The guide's hairline rules, applied to the editor's own dividers.
-        hl.WinSeparator  = { fg = c.border, bold = false }
-        hl.FloatBorder   = { fg = c.border, bg = c.bg_float }
-        hl.NormalFloat   = { fg = c.fg_float, bg = c.bg_float }
-        hl.CursorLine    = { bg = c.bg_highlight }
-        hl.CursorLineNr  = { fg = c.blue, bold = true }
-        hl.LineNr        = { fg = c.fg_gutter }
-        hl.Comment       = { fg = c.comment, italic = true }
-        -- Telescope, to match the guide's card-on-ground layering.
-        hl.TelescopeNormal       = { fg = c.fg_float, bg = c.bg_float }
-        hl.TelescopeBorder       = { fg = c.border, bg = c.bg_float }
-        hl.TelescopePromptNormal = { bg = c.bg_highlight }
-        hl.TelescopePromptBorder = { fg = c.bg_highlight, bg = c.bg_highlight }
-        hl.TelescopePromptTitle  = { fg = c.bg, bg = c.blue, bold = true }
-        hl.TelescopeResultsTitle = { fg = c.bg_float, bg = c.bg_float }
-        hl.TelescopePreviewTitle = { fg = c.bg, bg = c.green, bold = true }
-        hl.TelescopeSelection    = { bg = c.bg_visual, bold = true }
-      end,
-    },
-    config = function(_, opts)
-      vim.o.background = vim.g.nvim_theme_background or "dark"
-      require("tokyonight").setup(opts)
-      -- Apply whichever theme was saved. tokyonight is the fallback, and it is
-      -- loaded eagerly so there is never a flash of an unstyled screen.
-      local theme = require("config.theme")
-      theme.apply(
-        vim.g.nvim_theme_colorscheme or theme.default,
-        vim.g.nvim_theme_background or "dark"
-      )
-    end,
-  },
+  -- Colourschemes live in colors/ and lua/scheme/, not here: they ship with
+  -- this repo rather than coming from a plugin, so there is nothing for
+  -- lazy.nvim to install and no eager plugin needed to avoid a flash of the
+  -- wrong palette. init.lua applies the saved one directly.
 
   { "nvim-tree/nvim-web-devicons", lazy = true },
 
@@ -164,16 +47,17 @@ return {
       },
     },
     config = function(_, opts)
-      -- lualine's "auto" theme is unreadable against graphite: measured
-      -- 3.34:1 on the mode block and 3.19:1 beside it, both under the 4.5:1
-      -- floor. Use graphite's own table when graphite is active, and let
-      -- "auto" handle anything else.
+      -- lualine's "auto" theme is unreadable against these palettes: measured
+      -- 3.34:1 on the mode block and 3.19:1 beside it against graphite, both
+      -- under the 4.5:1 floor. Build the table from the active scheme's own
+      -- palette instead, and fall back to "auto" for anything else.
       local function resolve()
-        if vim.g.colors_name == "graphite" then
-          local ok, m = pcall(require, "graphite.lualine")
-          -- get() returns a plain table; a lazy metatable version produced an
-          -- empty statusline because LuaJIT has no __pairs.
-          if ok then return m.get() end
+        local ok, m = pcall(require, "scheme.lualine")
+        -- get() returns a plain table; a lazy metatable version produced an
+        -- empty statusline because LuaJIT has no __pairs.
+        if ok then
+          local theme = m.get(vim.g.colors_name)
+          if theme then return theme end
         end
         return "auto"
       end
@@ -182,7 +66,7 @@ return {
       require("lualine").setup(opts)
 
       vim.api.nvim_create_autocmd("ColorScheme", {
-        group = vim.api.nvim_create_augroup("graphite_lualine", { clear = true }),
+        group = vim.api.nvim_create_augroup("scheme_lualine", { clear = true }),
         callback = function()
           opts.options.theme = resolve()
           require("lualine").setup(opts)

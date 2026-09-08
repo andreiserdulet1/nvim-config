@@ -23,7 +23,9 @@ require("lazy").setup({
     { import = "plugins" },
   },
   defaults = { lazy = false, version = false },
-  install = { colorscheme = { "tokyonight" } },
+  -- The install screen uses whatever is already applied; every scheme here
+  -- ships in the repo, so there is nothing for lazy to fall back to.
+  install = { colorscheme = { "graphite" } },
   checker = { enabled = true, notify = false },  -- check for updates quietly
   rocks = { enabled = false },   -- no plugin here needs luarocks; keeps :checkhealth clean
   change_detection = { notify = false },

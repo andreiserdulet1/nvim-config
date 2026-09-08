@@ -33,13 +33,28 @@ end
 -- completely normal rather than showing an editor with no background at all.
 do
   local ok, painting = pcall(require, "config.painting")
-  vim.g.graphite_transparent = ok
+  vim.g.scheme_transparent = ok
     and painting.supported()
     and painting.installed()
     and painting.choice() ~= painting.NONE
 end
 
 require("config.options")
+
+-- Apply the saved colourscheme before lazy.nvim loads anything.
+--
+-- This used to live inside the tokyonight plugin spec, which had to be eager at
+-- priority 1000 so there was never a flash of the wrong palette. Every scheme
+-- now ships in this repo -- colors/*.lua with palettes in lua/scheme/ -- so
+-- there is no plugin to wait for and it can simply be applied first.
+do
+  local theme = require("config.theme")
+  local scheme = vim.g.nvim_theme_colorscheme or theme.default
+  local background = vim.g.nvim_theme_background or "dark"
+  vim.o.background = background
+  theme.apply(scheme, background)
+end
+
 require("config.lazy")
 require("config.keymaps")
 require("config.painting").setup()

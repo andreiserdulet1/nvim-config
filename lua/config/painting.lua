@@ -167,8 +167,8 @@ end
 -- apply and the handler reads the settled state rather than the old one.
 ---@param transparent boolean
 local function set_transparency(transparent)
-  if vim.g.graphite_transparent == transparent then return end
-  vim.g.graphite_transparent = transparent
+  if vim.g.scheme_transparent == transparent then return end
+  vim.g.scheme_transparent = transparent
   local theme = require("config.theme")
   theme.apply(theme.current or vim.g.colors_name or theme.default)
 end
@@ -212,7 +212,7 @@ end
 local function entries()
   local out = {
     { value = M.RANDOM, label = "Random each launch" },
-    { value = M.NONE, label = "No background — solid Graphite" },
+    { value = M.NONE, label = "No background — the theme, solid" },
   }
   for _, slug in ipairs(M.slugs()) do
     out[#out + 1] = { value = slug, label = label_for(slug) }

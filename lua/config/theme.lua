@@ -1,6 +1,6 @@
 -- Colourscheme switching and persistence.
 --
--- Both surviving themes read `vim.o.background`, so <leader>ut flips that and
+-- All three themes read `vim.o.background`, so <leader>ut flips that and
 -- re-applies the same name. The `by_background` field on a family is what says
 -- so; it exists because the four themes dropped in f5f26fb (catppuccin,
 -- rose-pine, kanagawa, cyberdream) exposed their light and dark variants as
@@ -17,18 +17,21 @@ local M = {}
 ---@field by_background boolean|nil  true when the scheme reads vim.o.background
 
 ---@type ThemeFamily[]
+-- All three ship in this repo (colors/*.lua + lua/scheme/palettes/), so none
+-- needs a plugin loaded before it can be applied.
 M.families = {
-  -- graphite ships in this repo (colors/graphite.lua), so it needs no plugin.
-  { dark = "graphite",   light = "graphite",   by_background = true },
-  { dark = "tokyonight", light = "tokyonight", plugin = "tokyonight.nvim", by_background = true },
+  { dark = "graphite",  light = "graphite",  by_background = true },
+  { dark = "heather",   light = "heather",   by_background = true },
+  { dark = "malachite", light = "malachite", by_background = true },
 }
 
 M.default = "graphite"
 
--- What we last applied. `vim.g.colors_name` cannot be trusted for this: apply
--- "tokyonight" and it reports "tokyonight-night"; apply "rose-pine-main" and it
--- reports "rose-pine". Matching the family on that silently fell through to the
--- fallback branch, so tokyonight's toggle did nothing.
+-- What we last applied. `vim.g.colors_name` cannot always be trusted for this:
+-- plugin schemes rename themselves on load -- apply "tokyonight" and it reports
+-- "tokyonight-night" -- and matching the family on that silently fell through
+-- to the fallback branch, so the toggle did nothing. The in-repo schemes do not
+-- do that, but the guard costs nothing and outlives them.
 M.current = nil
 
 local STATE = vim.fn.stdpath("data") .. "/theme"
@@ -112,6 +115,86 @@ function M.toggle_background()
     M.apply(target)
     vim.notify(target)
   end
+end
+
+--- Every scheme this config ships, for the picker.
+---@return string[]
+function M.names()
+  local seen, out = {}, {}
+  for _, f in ipairs(M.families) do
+    for _, n in ipairs({ f.dark, f.light }) do
+      if not seen[n] then
+        seen[n] = true
+        table.insert(out, n)
+      end
+    end
+  end
+  return out
+end
+
+--- Pick a scheme, previewing each as you move.
+---
+--- Hand-rolled rather than telescope.builtin.colorscheme, which seeds its list
+--- from `opts.colors` and then appends every colourscheme on the runtime path
+--- anyway -- so the three that ship here would arrive buried in Neovim's stock
+--- schemes. Same shape as the background picker in config/painting.lua.
+function M.menu()
+  local names = M.names()
+  local restore_scheme = M.current or vim.g.colors_name or M.default
+  local restore_bg = vim.o.background
+
+  local ok, pickers = pcall(require, "telescope.pickers")
+  if not ok then
+    vim.ui.select(names, { prompt = "Colourscheme" }, function(choice)
+      if choice then M.apply(choice) end
+    end)
+    return
+  end
+
+  local finders = require("telescope.finders")
+  local conf = require("telescope.config").values
+  local actions = require("telescope.actions")
+  local action_set = require("telescope.actions.set")
+  local action_state = require("telescope.actions.state")
+
+  pickers.new({}, {
+    prompt_title = "Colourscheme   (" .. restore_bg .. ")",
+    finder = finders.new_table({
+      results = names,
+      entry_maker = function(name)
+        return { value = name, display = name, ordinal = name }
+      end,
+    }),
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(prompt_bufnr)
+      -- Preview on move, without saving: moving over an entry should show it,
+      -- not commit to it. Applying directly rather than through M.apply keeps
+      -- the saved preference untouched until you actually choose.
+      action_set.shift_selection:enhance({
+        post = function()
+          local entry = action_state.get_selected_entry()
+          if entry then pcall(vim.cmd.colorscheme, entry.value) end
+        end,
+      })
+
+      actions.select_default:replace(function()
+        local entry = action_state.get_selected_entry()
+        actions.close(prompt_bufnr)
+        if entry then M.apply(entry.value, restore_bg) end
+      end)
+
+      -- Escaping puts back whatever was showing before, so browsing is free.
+      actions.close:enhance({
+        post = function()
+          if M.current ~= restore_scheme then
+            vim.o.background = restore_bg
+            pcall(vim.cmd.colorscheme, restore_scheme)
+          end
+        end,
+      })
+      return true
+    end,
+  }):find()
 end
 
 return M

@@ -47,7 +47,7 @@ return {
         end)
       end)
       -- The plugin sets its own highlights on ColorScheme and they read
-      -- correctly against tokyonight, so nothing is overridden here.
+      -- correctly against these palettes, so nothing is overridden here.
     end,
   },
 

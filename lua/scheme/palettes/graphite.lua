@@ -34,8 +34,8 @@ M.dark = {
   -- and `comment` has almost no room to give: it sits at 4.75:1 against a 4.5:1
   -- floor. Measured against the lifted ground (#363436, the brightest the
   -- painting is allowed to reach), #8b8274 falls to 3.27:1 and this holds
-  -- 4.51:1. Body text is 8.1:1 there and needs no adjustment.
-  comment_on_painting = "#a39b8f", -- 4.51:1 against #363436
+  -- 4.55:1. Body text is 8.1:1 there and needs no adjustment.
+  comment_on_painting = "#a49c90", -- 4.55:1 against #363436
 
   -- syntax accents
   amber     = "#d9a05b", --  7.83:1  functions and methods

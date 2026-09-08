@@ -113,15 +113,27 @@ Learn these first; everything else is discoverable by pressing `<Space>` and wai
 `<Space>uT` picks a theme with a live preview; `<Space>ut` flips light/dark. Both
 choices are remembered next time you start.
 
-| Theme | Variants |
-|---|---|
-| **graphite** *(default)* | dark / light |
-| tokyonight | dark / light |
+| Theme | Variants | |
+|---|---|---|
+| **graphite** *(default)* | dark / light | warm neutral greys, amber and sage |
+| **heather** | dark / light | pale lilac paper, orange and plum |
+| **malachite** | dark / light | cool charcoal, one green accent |
 
-**Graphite is ours**, in `lua/graphite/` and `colors/graphite.lua` — no plugin,
-because `~/.config/nvim` is already on the runtime path. Warm neutral rather than
-the blue-greys everything else uses: amber, sage, clay, slate and ochre on a warm
-grey ground, with a paper-like light variant.
+**All three ship in this repo** — `colors/*.lua` with palettes in
+`lua/scheme/palettes/` — and none is a plugin, because `~/.config/nvim` is already
+on the runtime path. There is nothing to install and nothing to load eagerly to
+avoid a flash of the wrong colours; `init.lua` simply applies the saved one before
+lazy.nvim starts.
+
+They share one engine, `lua/scheme/init.lua`. A palette supplies colours by
+**role**, not by name, so adding a fourth theme means writing one palette file
+and a two-line `colors/` shim — not another ~500 lines of highlight groups.
+
+Graphite is warm neutral rather than the blue-greys everything else uses. Heather
+and Malachite were each built from five given colours, with the light and dark
+variants being the same five colours with their roles swapped — lilac is
+Heather's ground in one and its text in the other — rather than a second palette
+invented to sit beside the first.
 
 The hue assignment is the actual design decision, not an afterthought:
 
@@ -137,15 +149,29 @@ The hue assignment is the actual design decision, not an afterthought:
 Operators and punctuation get dim text rather than a hue of their own.
 
 **Every text colour was set against a measured contrast ratio**, and the ratio is
-recorded next to it in `lua/graphite/palette.lua`. The first draft's comment
-colours failed — 3.92:1 dark and 3.84:1 light against a 4.5:1 floor — and were
-adjusted until they passed (now 4.75:1 and 4.97:1). Line numbers are the deliberate
-exception at ~2.5:1: a gutter should be present without competing with the code.
+recorded next to it in the palette file. Graphite's first draft failed on comments
+— 3.92:1 dark and 3.84:1 light against a 4.5:1 floor — and was adjusted until it
+passed. Line numbers are the deliberate exception at ~2.5:1: a gutter should be
+present without competing with the code.
 
-Two things needed explicit handling. lualine's `theme = "auto"` produced a
-grey-on-grey statusline against this palette (3.34:1), so `lua/graphite/lualine.lua`
-derives it properly — now 4.5:1 to 13.7:1. And the guide's palette is re-derived
-from Graphite, so the editor and the page still match.
+Two of the colours Heather and Malachite were built from cannot be used as given,
+which is worth stating rather than quietly fudging:
+
+- `#E98A15` on Heather's `#ECE5F0` ground measures **2.10:1** — unreadable as body
+  text. The light variant darkens it to `#8e540d` (4.97:1) for functions and keeps
+  the pure orange only where it sits *behind* text: the cursor, IncSearch, the
+  lualine mode chip.
+- `#59114D` and `#003B36` on Heather's dark `#012622` ground measure 1.24:1 and
+  1.29:1, so the dark variant lightens both until they clear 6:1.
+
+Malachite needed less work: on `#272D2D`, four of its five colours land on their
+role unadjusted — mauve 5.21:1, steel 8.00:1, snow 12.72:1, green 6.74:1.
+
+Both themes have three source hues covering six syntax roles, so pairs share a hue
+and separate by lightness. Graphite does the same with its two warm tones.
+
+lualine's `theme = "auto"` produced a grey-on-grey statusline (3.34:1), so
+`lua/scheme/lualine.lua` builds the table from whichever palette is active.
 
 ### Background paintings
 
@@ -167,7 +193,7 @@ re-run — it gets copied into `src/` ready to commit.
 
 **Neovim cannot draw a background image.** Nothing in the editor can — it paints
 character cells, not pixels. So the image comes from **iTerm2** underneath, with
-Graphite made transparent so it shows through. `lua/config/painting.lua` is only
+The theme made transparent so it shows through. `lua/config/painting.lua` is only
 the switch: it sends iTerm2 an `OSC 1337` escape code on `VimEnter` and clears it
 on `VimLeavePre`, which is why your shell, lazygit and `dev` sessions stay plain.
 Nothing is emitted in any other terminal, so this is inert over SSH and headless.
@@ -175,7 +201,7 @@ Nothing is emitted in any other terminal, so this is inert over SSH and headless
 #### Why the paintings are tone-mapped rather than faded
 
 The obvious approach is to blend the painting over the ground colour at some low
-opacity. Measuring it killed that idea. Graphite's ground is so dark, and its
+opacity. Measuring it killed that idea. A dark ground is so dark, and its
 comment colour so close to the 4.5:1 floor already, that the brightest part of a
 sky hits the limit at **2–3% opacity** — indistinguishable from no painting at
 all. The constraint is not *how much painting* but *how bright the background may
@@ -215,7 +241,7 @@ behind a hover window is just noise.
 |---|---|
 | `:Painting` | the picker, same as `<Space>ub` |
 | `:PaintingNext` | a different painting, now |
-| `:PaintingOff` | back to solid Graphite |
+| `:PaintingOff` | back to the solid theme |
 
 The *renders* stay out of the repo, in `~/.local/share/nvim/paintings` (~25MB) —
 they are derived files and `import.sh` rebuilds them in seconds. They are PNG8: quantising to a palette dithers away the contour lines a

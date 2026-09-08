@@ -17,9 +17,8 @@ end, { desc = "Open the web guide" })
 -- See lua/config/theme.lua for why the two mechanisms differ.
 map("n", "<leader>ut", function() require("config.theme").toggle_background() end,
   { desc = "Toggle light / dark" })
-map("n", "<leader>uT", function()
-  require("telescope.builtin").colorscheme({ enable_preview = true })
-end, { desc = "Pick a colourscheme" })
+map("n", "<leader>uT", function() require("config.theme").menu() end,
+  { desc = "Pick a colourscheme" })
 
 -- Background paintings, previewed the same way. "No background" is an entry in
 -- the list, so this is also how you turn the whole thing off.

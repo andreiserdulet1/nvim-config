@@ -1,4 +1,4 @@
--- A lualine theme for Graphite.
+-- A lualine theme built from whichever scheme palette is active.
 --
 -- This exists because lualine's `theme = "auto"` produced an unreadable
 -- statusline against this palette -- measured 3.34:1 for the mode block and
@@ -17,8 +17,12 @@ local M = {}
 
 --- Build the theme for the palette matching the current `background`.
 ---@return table
-function M.get()
-  local c = require("graphite.palette").get()
+---@param name string|nil  defaults to the active colourscheme
+function M.get(name)
+  name = name or vim.g.colors_name or "graphite"
+  local ok, palettes = pcall(require, "scheme.palettes." .. name)
+  if not ok then return nil end
+  local c = palettes.get()
 
   local function chip(colour)
     return { fg = c.ground, bg = colour, gui = "bold" }
