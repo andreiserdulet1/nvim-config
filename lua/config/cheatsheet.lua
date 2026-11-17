@@ -30,6 +30,10 @@ M.sections = {
     "MOUSE",
     {
       { "click ☰", "Statusline: every command, searchable  <- start here" },
+      { "drag to select", "Copies to the clipboard (like a terminal)" },
+      { "Cmd+V", "Pastes, in text and in terminals" },
+      { "right click", "…also has Copy / Paste / Copy… / Paste from history" },
+      { "<leader>uy", "Turn copy-on-select off / on" },
       { "click ▶ Run", "Statusline: start / stop / view dev servers" },
       { "click ✦ Claude", "Statusline: show / hide Claude (right-click: move it)" },
       { "click ⚙ CI", "Statusline: this branch's workflow runs" },
@@ -226,9 +230,11 @@ M.sections = {
   {
     "JIRA",
     {
-      { "<leader>js", "Current sprint" },
+      { "<leader>jB", "Switch board / project — any Awin team, or" },
+      { "", "All of Awin (search everywhere); remembered" },
+      { "<leader>js", "Current sprint of that board" },
       { "<leader>jb", "Board — pick a column, then an issue" },
-      { "<leader>jm", "My open issues" },
+      { "<leader>jm", "My open issues, across every project" },
       { "<leader>jf", "Search issues — or type a key to jump" },
       { "", "AR-991, ar-991, or just 991, from any project" },
       { "", "Anything else searches summary, description" },

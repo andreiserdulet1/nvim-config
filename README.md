@@ -155,6 +155,14 @@ double-click.
 
 ### Copying
 
+**With the mouse:** drag to select and it's on the clipboard — like a terminal,
+and the selection stays so you can still act on it. **Cmd+V** pastes, in text and
+in terminals. Right-click has *Copy*, *Paste*, *Copy…* and *Paste from history*.
+(iTerm2 hands mouse drags to Neovim, which is why Cmd+C has nothing to copy —
+select-to-copy is the replacement. `<Space>uy` turns it off.)
+
+**With the keyboard:**
+
 Right-click → *Copy…*, `<Space>yy`, or click the file name in the statusline:
 
 | Key | Copies |
@@ -300,6 +308,14 @@ and `<Space>pk` shows its checks in a buffer. Reviewing happens in the browser
 (or `<Space>gm` for the whole branch as a diff here).
 
 ### Jira
+
+**Any board at Awin.** `<Space>jB` lists every project you can see (74 today), then
+that project's boards; pick one and the sprint and board views show *its* active
+sprint. *All of Awin* makes search span every project. The choice is remembered,
+and recent boards sit at the top of the list. `<Space>jm` (your open issues)
+always covers every project, whichever board is selected. Under the hood this
+uses a derived copy of jira-cli's config for other boards — your
+`~/.config/.jira/.config.yml` is never edited.
 
 `<Space>js` is the current sprint, `<Space>jb` is the board a column at a time,
 `<Space>jm` is your own open issues, `<Space>jf` searches.

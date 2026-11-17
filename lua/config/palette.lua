@@ -103,7 +103,9 @@ M.items = {
   { "CI", "Re-run failed jobs", "<leader>Ar", req("config.actions", "rerun") },
   { "CI", "Dispatch a workflow (confirms)", "<leader>Ad", req("config.actions", "dispatch") },
   -- Jira
+  { "Jira", "Switch board / project (or all of Awin)", "<leader>jB", req("config.jira", "switch") },
   { "Jira", "Current sprint", "<leader>js", req("config.jira", "sprint") },
+  { "Jira", "Search issues", "<leader>jf", req("config.jira", "search") },
   { "Jira", "Board (pick a column)", "<leader>jb", req("config.jira", "board") },
   { "Jira", "My open issues", "<leader>jm", req("config.jira", "mine") },
   -- Project

@@ -179,7 +179,25 @@ end
 -- Neovim's numbered registers only keep line-wise deletes; this keeps all.
 M.ring = {}
 
+-- Select with the mouse = copied, like a terminal. With mouse=a, iTerm2 hands
+-- drags to Neovim, so Cmd+C has no selection of its own to copy; this makes the
+-- drag itself copy to the system clipboard (and keeps the selection, so you can
+-- still act on it). Cmd+V pastes as normal. <leader>uy turns it off.
+vim.g.copy_on_select = true
+
+local function copy_on_release()
+  if vim.g.copy_on_select then
+    vim.cmd('silent normal! "+ygv')
+  end
+end
+
+function M.toggle_copy_on_select()
+  vim.g.copy_on_select = not vim.g.copy_on_select
+  vim.notify("Copy on mouse select: " .. (vim.g.copy_on_select and "on" or "off"))
+end
+
 function M.setup()
+  vim.keymap.set("x", "<LeftRelease>", copy_on_release, { desc = "Mouse selection → clipboard" })
   vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("config_yank_ring", { clear = true }),
     callback = function()

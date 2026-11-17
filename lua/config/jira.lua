@@ -71,6 +71,98 @@ function M.project()
   return nil
 end
 
+---------------------------------------------------------------------------
+-- Which board / project you're looking at
+---------------------------------------------------------------------------
+-- jira-cli's config pins one project and one board (whatever `jira init`
+-- chose). Every team at Awin has its own, so the scope is switchable with
+-- <leader>jB and remembered:
+--
+--   board    the sprint and board views use this board's active sprint(s)
+--   project  search is scoped to it; nil means "All of Awin"
+--
+-- jira-cli ANDs its configured project onto every query, so a board in another
+-- project gets a derived config file (the original with project and board
+-- swapped), and "All of Awin" writes the query as `issuekey is EMPTY OR (…)` --
+-- the project clause binds to the always-false half and the real condition
+-- runs across every project.
+
+local SCOPE_FILE = vim.fn.stdpath("data") .. "/jira_scope.json"
+local DERIVED_DIR = vim.fn.stdpath("state") .. "/jira"
+
+local function config_board()
+  if vim.fn.filereadable(CONFIG) == 0 then return nil end
+  local lines = vim.fn.readfile(CONFIG)
+  local inside, board = false, {}
+  for _, line in ipairs(lines) do
+    if line:match("^board:") then inside = true
+    elseif inside and line:match("^%S") then break
+    elseif inside then
+      local k, v = line:match("^%s+(%w+):%s*(.+)$")
+      if k then board[k] = (vim.trim(v):gsub("^['\"]", ""):gsub("['\"]$", "")) end
+    end
+  end
+  return board.id and { id = board.id, name = board.name, type = board.type } or nil
+end
+
+--- The current scope: { project = "AR" | nil, board = { id, name, type } | nil }.
+function M.scope()
+  local ok, lines = pcall(vim.fn.readfile, SCOPE_FILE)
+  if ok and lines[1] then
+    local dok, saved = pcall(vim.json.decode, table.concat(lines, "\n"), { luanil = { object = true } })
+    if dok and type(saved) == "table" then return saved end
+  end
+  return { project = M.project(), board = config_board() }
+end
+
+local function save_scope(scope)
+  pcall(vim.fn.writefile, { vim.json.encode(scope) }, SCOPE_FILE)
+  -- Remember recent choices for the top of the picker.
+  local recent = M.recent_scopes()
+  local key = (scope.project or "*") .. "/" .. (scope.board and scope.board.id or "")
+  local out = { scope }
+  for _, r in ipairs(recent) do
+    if (r.project or "*") .. "/" .. (r.board and r.board.id or "") ~= key and #out < 6 then table.insert(out, r) end
+  end
+  pcall(vim.fn.writefile, { vim.json.encode(out) }, SCOPE_FILE .. ".recent")
+end
+
+function M.recent_scopes()
+  local ok, lines = pcall(vim.fn.readfile, SCOPE_FILE .. ".recent")
+  if not ok or not lines[1] then return {} end
+  local dok, list = pcall(vim.json.decode, table.concat(lines, "\n"), { luanil = { object = true } })
+  return dok and type(list) == "table" and list or {}
+end
+
+--- A one-line description, for titles.
+function M.scope_label(scope)
+  scope = scope or M.scope()
+  local where = scope.project or "All of Awin"
+  return scope.board and (scope.board.name .. " · " .. where) or where
+end
+
+-- A copy of jira-cli's config pointed at another project and board.
+local function derived_config(project, board)
+  if vim.fn.filereadable(CONFIG) == 0 then return nil end
+  local lines = vim.fn.readfile(CONFIG)
+  local section
+  for i, line in ipairs(lines) do
+    if line:match("^%S") then section = line:match("^(%w+):") end
+    if section == "project" and line:match("^%s+key:") then
+      lines[i] = line:match("^(%s+)") .. "key: " .. (project or "")
+    elseif section == "board" and board then
+      local indent, k = line:match("^(%s+)(%w+):")
+      if k == "id" then lines[i] = indent .. "id: " .. board.id
+      elseif k == "name" then lines[i] = indent .. "name: " .. board.name
+      elseif k == "type" then lines[i] = indent .. "type: " .. (board.type or "scrum") end
+    end
+  end
+  vim.fn.mkdir(DERIVED_DIR, "p")
+  local path = ("%s/%s-%s.yml"):format(DERIVED_DIR, project or "all", board and board.id or "none")
+  vim.fn.writefile(lines, path)
+  return path
+end
+
 --- How to fix a missing credential, as one message the reader can act on.
 local function setup_hint(account)
   return table.concat({
@@ -118,8 +210,43 @@ end
 --- Run `jira` and return stdout, or nil plus a message worth showing.
 ---@param args string[]
 ---@param opts table|nil  { stdin = string }
+-- Apply the scope to an `issue list` / `sprint list` call: the right project
+-- (or all of them), and ORDER BY moved into --order-by, because jira-cli
+-- appends its own ORDER BY and Jira rejects a second one.
+local function scoped(args, opts)
+  local verb = args[1] .. " " .. (args[2] or "")
+  if verb ~= "issue list" and verb ~= "sprint list" then return args end
+  local scope = M.scope()
+  local out = vim.deepcopy(args)
+  local qi
+  for i, a in ipairs(out) do if a == "-q" then qi = i + 1 end end
+  if qi and out[qi] then
+    local cond, field, dir = out[qi]:match("^(.-)%s+ORDER BY%s+([%w_]+)%s*(%a*)%s*$")
+    if cond then
+      out[qi] = cond
+      vim.list_extend(out, { "--order-by", field })
+      if dir:upper() == "ASC" then table.insert(out, "--reverse") end
+    end
+  end
+  local everywhere = opts.everywhere or (scope.project == nil)
+  if verb == "issue list" and everywhere then
+    if qi then
+      out[qi] = "issuekey is EMPTY OR (" .. out[qi] .. ")"
+    else
+      -- A flag-only query (-a, -s): turn it into JQL so it can be unscoped.
+      return out
+    end
+  elseif verb == "sprint list" or scope.project ~= M.project() or (scope.board and config_board()
+    and scope.board.id ~= config_board().id) then
+    local cfg = derived_config(scope.project or M.project(), scope.board)
+    if cfg then vim.list_extend(out, { "-c", cfg }) end
+  end
+  return out
+end
+
 local function jira(args, opts)
   opts = opts or {}
+  args = scoped(args, opts)
   if vim.fn.executable("jira") == 0 then
     return nil, "jira-cli is not installed — brew bundle --file=~/.config/nvim/Brewfile"
   end
@@ -193,8 +320,10 @@ local function decode(out)
   return issues
 end
 
-local function fetch(args)
-  local out, err = jira(args)
+local function fetch(args, opts)
+  local out, err = jira(args, opts)
+  -- jira-cli exits non-zero for an empty result; that is an answer, not an error.
+  if not out and err and err:match("No result found") then return {} end
   if not out then return nil, err end
   return decode(out)
 end
@@ -206,6 +335,19 @@ end
 --- returns exactly the same set -- jira-cli scopes -q to the configured
 --- project, and openSprints() to the sprints currently running in it.
 function M.sprint_issues()
+  local scope = M.scope()
+  if scope.board then
+    -- The board's own active sprint(s), so a board shared across projects
+    -- shows everything on it, and two boards in one project don't mix.
+    local out = jira({ "sprint", "list", "--state", "active", "--table", "--plain",
+      "--columns", "id", "--no-headers" })
+    local ids = {}
+    for id in (out or ""):gmatch("(%d+)") do table.insert(ids, id) end
+    if #ids > 0 then
+      return fetch({ "issue", "list", "-q", "sprint in (" .. table.concat(ids, ",") .. ")", "--raw" },
+        { everywhere = true })
+    end
+  end
   return fetch({ "issue", "list", "-q", "sprint in openSprints()", "--raw" })
 end
 
@@ -214,7 +356,9 @@ end
 function M.my_issues()
   local me = M.login()
   if not me then return nil, "jira-cli is not configured yet — run `jira init`" end
-  return fetch({ "issue", "list", "-a", me, "-s~Done", "--raw" })
+  -- Every project: your work is yours whichever board it sits on.
+  return fetch({ "issue", "list", "-q", "assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC",
+    "--raw" }, { everywhere = true })
 end
 
 --- Anything matching a JQL fragment.
@@ -247,7 +391,7 @@ local function as_key(text)
   if text:match("^" .. KEY_PATTERN .. "$") then return text end
   local number = text:match("^#?(%d+)$")
   if number then
-    local project = M.project()
+    local project = M.scope().project or M.project()
     if project then return project .. "-" .. number end
   end
   return nil
@@ -919,7 +1063,7 @@ local function show_list(title, fetcher)
 end
 
 --- Issues in the current sprint.
-function M.sprint() show_list("Current sprint", M.sprint_issues) end
+function M.sprint() show_list("Current sprint — " .. M.scope_label(), M.sprint_issues) end
 
 --- Your open issues.
 function M.mine() show_list("My open issues", M.my_issues) end
@@ -979,13 +1123,99 @@ function M.search()
     if not term:find("*", 1, true) then term = term .. "*" end
 
     local jql = string.format('text ~ "%s" ORDER BY updated DESC', term)
-    show_list("Search: " .. vim.trim(text), function() return M.jql_issues(jql) end)
+    show_list("Search " .. M.scope_label() .. ": " .. vim.trim(text), function() return M.jql_issues(jql) end)
   end)
 end
 
 --- The raw jira-cli explorer, for anything this layer does not wrap.
 function M.tui()
-  in_terminal("jira sprint list --current")
+  local scope = M.scope()
+  local cfg = scope.board and derived_config(scope.project or M.project(), scope.board)
+  in_terminal("jira sprint list --current" .. (cfg and (" -c " .. vim.fn.shellescape(cfg)) or ""))
+end
+
+---------------------------------------------------------------------------
+-- Switching board / project
+---------------------------------------------------------------------------
+
+local projects_cache
+
+local function list_projects()
+  if projects_cache then return projects_cache end
+  local out, err = jira({ "project", "list" })
+  if not out then return nil, err end
+  local list = {}
+  for i, line in ipairs(vim.split(vim.trim(out), "\n")) do
+    -- KEY  NAME  TYPE  LEAD, separated by runs of spaces or tabs.
+    local key = line:match("^(%S+)")
+    if i > 1 and key then
+      local cols = vim.split(vim.trim(line), "%s%s+")
+      if #cols < 2 then cols = vim.split(vim.trim(line), "\t+") end
+      table.insert(list, { key = key, name = cols[2] or "", lead = cols[4] or "" })
+    end
+  end
+  table.sort(list, function(a, b) return a.key < b.key end)
+  projects_cache = list
+  return list
+end
+
+local function list_boards(project)
+  local out = jira({ "board", "list", "-p", project })
+  local boards = {}
+  for _, line in ipairs(vim.split(vim.trim(out or ""), "\n")) do
+    local id, rest = line:match("^(%d+)%s+(.+)$")
+    if id then
+      local name, kind = rest:match("^(.-)%s+(%a+)%s*$")
+      table.insert(boards, { id = id, name = vim.trim(name or rest), type = kind or "scrum" })
+    end
+  end
+  return boards
+end
+
+local function choose_board(project, done)
+  local boards = list_boards(project)
+  if #boards == 0 then
+    done({ project = project, board = nil })
+    return
+  end
+  if #boards == 1 then
+    done({ project = project, board = boards[1] })
+    return
+  end
+  vim.ui.select(boards, {
+    prompt = project .. " — which board?",
+    format_item = function(b) return ("%-8s %-40s %s"):format(b.id, b.name, b.type) end,
+  }, function(b) if b then done({ project = project, board = b }) end end)
+end
+
+--- Pick a project and one of its boards -- or "All of Awin" -- for every view.
+function M.switch()
+  local projects, err = list_projects()
+  if not projects then fail(err) return end
+  local current = M.scope()
+  local items = {}
+  for _, r in ipairs(M.recent_scopes()) do
+    table.insert(items, { recent = r, text = "↺ " .. M.scope_label(r) })
+  end
+  table.insert(items, { all = true, text = "★ All of Awin — search every project (keeps the board: "
+    .. (current.board and current.board.name or "none") .. ")" })
+  for _, p in ipairs(projects) do
+    table.insert(items, { project = p.key, text = ("%-8s %s%s"):format(p.key, p.name,
+      p.lead ~= "" and ("  · " .. p.lead) or "") })
+  end
+  vim.ui.select(items, {
+    prompt = "Jira — now: " .. M.scope_label(current),
+    format_item = function(i) return i.text end,
+  }, function(choice)
+    if not choice then return end
+    local function apply(scope)
+      save_scope(scope)
+      vim.notify("Jira: " .. M.scope_label(scope))
+    end
+    if choice.recent then apply(choice.recent)
+    elseif choice.all then apply({ project = nil, board = current.board })
+    else choose_board(choice.project, apply) end
+  end)
 end
 
 return M

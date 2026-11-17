@@ -133,6 +133,7 @@ local on_current = function(fn)
     j.current(function(key) j[fn](key) end)
   end
 end
+map("n", "<leader>jB", jira("switch"), { desc = "Switch board / project (or all of Awin)" })
 map("n", "<leader>js", jira("sprint"), { desc = "Current sprint" })
 map("n", "<leader>jb", jira("board"), { desc = "Board (pick a column)" })
 map("n", "<leader>jm", jira("mine"), { desc = "My open issues" })
@@ -171,6 +172,8 @@ map({ "n", "x" }, "<leader>ym", cp("markdown"), { desc = "Copy as Markdown block
 map("n", "<leader>yp", cp("relative"), { desc = "Copy relative path" })
 map("n", "<leader>yi", cp("import"), { desc = "Copy import line" })
 map("n", "<leader>fy", cp("history"), { desc = "Clipboard history" })
+map("n", "<leader>uy", function() require("config.copy").toggle_copy_on_select() end,
+  { desc = "Toggle copy on mouse select" })
 
 -- Git, JetBrains-style: one menu plus direct keys. See config/vcs.lua.
 local vcs = function(fn, ...)
