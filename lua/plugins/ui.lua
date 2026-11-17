@@ -39,7 +39,9 @@ return {
             "diagnostics",
             on_click = function() vim.cmd("Trouble diagnostics toggle filter.buf=0") end,
           },
-          { "filename", path = 1 },  -- relative path, so you know which module
+          -- Relative path, so you know which module. Click it to copy a path,
+          -- a GitHub link or a snippet.
+          { "filename", path = 1, on_click = function() require("config.copy").menu() end },
         },
         lualine_x = {
           -- Buttons. Everything here is clickable: left click does the obvious

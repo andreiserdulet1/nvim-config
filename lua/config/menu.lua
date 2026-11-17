@@ -76,6 +76,9 @@ function M.setup()
     anoremenu 100.70 PopUp.Preview\ this\ hunk <Cmd>Gitsigns preview_hunk_inline<CR>
     anoremenu 100.80 PopUp.Blame\ this\ line   <Cmd>lua require("gitsigns").blame_line({ full = true })<CR>
     anoremenu 100.90 PopUp.lazygit             <Cmd>LazyGit<CR>
+    anoremenu 100.05 PopUp.Copy…               <Cmd>lua require("config.copy").menu()<CR>
+    vnoremenu 100.05 PopUp.Copy…               <Cmd>lua require("config.copy").menu()<CR>
+    anoremenu 100.06 PopUp.Paste\ from\ history… <Cmd>lua require("config.copy").history()<CR>
     anoremenu 100.91 PopUp.-claude-            <Nop>
     anoremenu 100.92 PopUp.Ask\ Claude\ about\ this <Cmd>lua require("config.claude").ask()<CR>
     vnoremenu 100.92 PopUp.Ask\ Claude\ about\ this <Cmd>lua require("config.claude").ask()<CR>

@@ -39,6 +39,14 @@ M.items = {
   { "Claude", "Add this file to the conversation", "<leader>ab", cmd("ClaudeCodeAdd %") },
   { "Claude", "Move Claude's window (right/bottom/float/left)", "<leader>ap", req("config.claude", "layout_menu") },
   { "Claude", "Pick the model", "<leader>am", cmd("ClaudeCodeSelectModel") },
+  -- Copy
+  { "Copy", "Copy… (pick what)", "<leader>yy", req("config.copy", "menu") },
+  { "Copy", "GitHub link to this line", "<leader>yg", req("config.copy", "github") },
+  { "Copy", "path:line reference", "<leader>yr", req("config.copy", "path_line") },
+  { "Copy", "As a Markdown code block", "<leader>ym", req("config.copy", "markdown") },
+  { "Copy", "Relative path", "<leader>yp", req("config.copy", "relative") },
+  { "Copy", "Import line for this symbol", "<leader>yi", req("config.copy", "import") },
+  { "Copy", "Clipboard history (paste)", "<leader>fy", req("config.copy", "history") },
   -- Terminal
   { "Terminal", "Shell at the project root", "<leader>tn", function()
       vim.api.nvim_feedkeys(vim.keycode("<leader>tn"), "m", false)

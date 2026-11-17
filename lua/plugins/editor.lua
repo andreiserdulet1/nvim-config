@@ -144,6 +144,7 @@ return {
         { "<leader>A", group = "github actions" },
         { "<leader>q", group = "session / quit" },
         { "<leader>w", group = "window" },
+        { "<leader>y", group = "copy" },
       },
     },
     keys = {

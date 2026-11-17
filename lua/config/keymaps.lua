@@ -144,6 +144,18 @@ map("n", "<leader>ngu", ng("guard"), { desc = "ng generate guard" })
 map("n", "<leader>ngx", function() require("config.angular").palette() end,
   { desc = "ng command palette" })
 
+-- Copying ------------------------------------------------------------------
+-- See config/copy.lua: paths, GitHub links, snippets, imports, history.
+local cp = function(fn) return function() require("config.copy")[fn]() end end
+-- <leader>y is a prefix only; a key that is both waits out the timeout.
+map({ "n", "x" }, "<leader>yy", cp("menu"), { desc = "Copy… (path, link, snippet)" })
+map({ "n", "x" }, "<leader>yg", cp("github"), { desc = "Copy GitHub link" })
+map({ "n", "x" }, "<leader>yr", cp("path_line"), { desc = "Copy path:line" })
+map({ "n", "x" }, "<leader>ym", cp("markdown"), { desc = "Copy as Markdown block" })
+map("n", "<leader>yp", cp("relative"), { desc = "Copy relative path" })
+map("n", "<leader>yi", cp("import"), { desc = "Copy import line" })
+map("n", "<leader>fy", cp("history"), { desc = "Clipboard history" })
+
 -- Saving / quitting ---------------------------------------------------------
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })

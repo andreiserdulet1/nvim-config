@@ -53,6 +53,18 @@ M.sections = {
     },
   },
   {
+    "COPY  (also right-click → Copy…, or click the file name in the statusline)",
+    {
+      { "<leader>yy", "Copy… — pick what (works on a selection too)" },
+      { "<leader>yg", "GitHub permalink to this line / selection" },
+      { "<leader>yr", "path:line reference, e.g. src/app/x.ts:12-20" },
+      { "<leader>ym", "Selection as a Markdown code block with its path" },
+      { "<leader>yp", "Relative path" },
+      { "<leader>yi", "import { Symbol } from '…' — relative to the last file" },
+      { "<leader>fy", "Clipboard history: <CR> pastes, <C-y> copies" },
+    },
+  },
+  {
     "BUFFERS (your tabs along the top)",
     {
       { "<S-h> / <S-l>", "Previous / next buffer" },
