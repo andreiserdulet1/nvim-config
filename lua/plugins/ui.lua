@@ -32,7 +32,13 @@ return {
         -- is the Trouble list, the diff stat is the diffview. Same destinations
         -- as <leader>gg, <leader>xx and <leader>gd, reachable without them.
         lualine_b = {
-          { "branch", on_click = function() vim.cmd("LazyGit") end },
+          -- Left: lazygit. Right: the JetBrains-style git menu.
+          {
+            "branch",
+            on_click = function(_, button)
+              if button == "r" then require("config.vcs").menu() else vim.cmd("LazyGit") end
+            end,
+          },
         },
         lualine_c = {
           {

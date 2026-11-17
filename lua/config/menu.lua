@@ -36,6 +36,13 @@ local component_items = {
   [[PopUp.Test\ this\ component]],
 }
 
+-- Only offered in a spec.
+local test_items = {
+  [[PopUp.Run\ this\ test]],
+  [[PopUp.Run\ this\ spec]],
+  [[PopUp.Claude:\ fix\ failing\ test]],
+}
+
 -- Only offered when there is a diagnostic on the clicked line.
 local diag_items = {
   [[PopUp.Claude:\ fix\ this]],
@@ -95,7 +102,11 @@ function M.setup()
     anoremenu 100.94 PopUp.Claude:\ explain    <Cmd>lua require("config.claude").explain()<CR>
     vnoremenu 100.94 PopUp.Claude:\ explain    <Cmd>lua require("config.claude").explain()<CR>
     vnoremenu 100.95 PopUp.Send\ to\ Claude    <Cmd>ClaudeCodeSend<CR>
+    anoremenu 100.95 PopUp.Git…               <Cmd>lua require("config.vcs").menu()<CR>
     anoremenu 100.96 PopUp.-run-               <Nop>
+    anoremenu 100.97 PopUp.Run\ this\ test     <Cmd>lua require("config.tests").run_nearest()<CR>
+    anoremenu 100.97 PopUp.Run\ this\ spec     <Cmd>lua require("config.tests").run_file()<CR>
+    anoremenu 100.97 PopUp.Claude:\ fix\ failing\ test <Cmd>lua require("config.tests").send_failure()<CR>
     anoremenu 100.101 PopUp.Go\ to\ template   <Cmd>lua require("config.component").open("html")<CR>
     anoremenu 100.102 PopUp.Go\ to\ styles     <Cmd>lua require("config.component").open("style")<CR>
     anoremenu 100.103 PopUp.Go\ to\ spec       <Cmd>lua require("config.component").open("spec")<CR>
@@ -122,6 +133,7 @@ function M.setup()
       -- Nothing to rename or act on without a server attached.
       set_enabled(lsp_items, vim.lsp.get_clients({ bufnr = 0 })[1] ~= nil)
       set_enabled(diag_items, #vim.diagnostic.get(0, { lnum = vim.fn.line(".") - 1 }) > 0)
+      set_enabled(test_items, vim.api.nvim_buf_get_name(0):match("%.spec%.ts$") ~= nil)
       set_enabled(component_items, vim.api.nvim_buf_get_name(0):match("%.component%.[%w.]+$") ~= nil)
       -- gitsigns sets this when it attaches, which it only does inside a repo.
       set_enabled(git_items, vim.b.gitsigns_status_dict ~= nil)
@@ -214,6 +226,10 @@ function M.tree(state)
     if url then vim.ui.open(url) end
   end)
   entry("Reveal in Finder", function() vim.ui.open(dir) end)
+  if node.type ~= "directory" then
+    entry("Git: rollback…", function() require("config.vcs").rollback(node.path) end)
+    entry("Git: history", function() vim.cmd("DiffviewFileHistory " .. vim.fn.fnameescape(node.path)) end)
+  end
   entry("Stage", function() commands.git_add_file(state) end)
   entry("Unstage", function() commands.git_unstage_file(state) end)
 

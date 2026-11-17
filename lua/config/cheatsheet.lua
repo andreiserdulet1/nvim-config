@@ -165,6 +165,20 @@ M.sections = {
     },
   },
   {
+    "TESTS IN THE GUTTER  (a ▶ beside every describe / it in a spec)",
+    {
+      { "click ▶", "Run that test (or describe) on its own" },
+      { "<leader>nT", "Run the test under the cursor" },
+      { "<leader>nF", "Run this spec — marks turn ✓ / ✗" },
+      { "<leader>n.", "Run the last spec again" },
+      { "<leader>nf", "Show the last run's output" },
+      { "<leader>aF", "Send the failing test (on a ✗ line) to Claude" },
+      { "<leader>nC", "Run this spec with coverage: line numbers turn" },
+      { "", "green (ran) / red (never ran) in the files it covers" },
+      { "<leader>uC", "Toggle the coverage colours" },
+    },
+  },
+  {
     "RUN & TEST",
     {
       { "<leader>nt", "Test just this component" },
@@ -228,6 +242,19 @@ M.sections = {
       { "<leader>jc", "Comment on it  (<C-s> posts)" },
       { "<leader>jo", "Open it in the browser" },
       { "<leader>jj", "The raw jira-cli explorer" },
+    },
+  },
+  {
+    "GIT, JETBRAINS-STYLE  (right-click → Git…, or right-click the branch)",
+    {
+      { "<leader>gv", "The git menu: file, change, repo — all of it" },
+      { "click a change", "In the gutter: show / stage / rollback it" },
+      { "<leader>gA / gR", "Add / rollback this file (asks first)" },
+      { "<leader>gk / gK", "Commit… / commit and push…" },
+      { "<leader>gp / gP", "Push (sets upstream) / pull (rebase, autostash)" },
+      { "<leader>gn", "Branches: switch (offers to stash) or create" },
+      { "<leader>gS / gU", "Stash / unstash — pop, apply or drop, with preview" },
+      { "<leader>gz", "Undo the last commit, keeping its changes" },
     },
   },
   {

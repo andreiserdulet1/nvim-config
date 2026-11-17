@@ -68,6 +68,20 @@ map("n", "<leader>na", scripts("test_all", false), { desc = "Test everything (on
 map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (watch)" })
 map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
 
+-- Single tests, results in the gutter, coverage. Clicking ▶ does the same.
+-- See config/tests.lua.
+local tst = function(fn, ...)
+  local args = { ... }
+  return function() require("config.tests")[fn](unpack(args)) end
+end
+map("n", "<leader>nT", tst("run_nearest"), { desc = "Run the test under the cursor" })
+map("n", "<leader>nF", tst("run_file"), { desc = "Run this spec (marks ✓ / ✗)" })
+map("n", "<leader>n.", tst("rerun"), { desc = "Run the last spec again" })
+map("n", "<leader>nf", tst("output"), { desc = "Last test run's output" })
+map("n", "<leader>nC", tst("run_coverage"), { desc = "Run this spec with coverage" })
+map("n", "<leader>uC", tst("coverage_show"), { desc = "Toggle coverage colours" })
+map("n", "<leader>aF", tst("send_failure"), { desc = "Send the failing test to Claude" })
+
 -- Dev servers: this project's start + wiremock, optionally inside shell-ui.
 -- Shown in the statusline; click it for the same menu. See config/services.lua.
 local svc = function(fn, ...)
@@ -155,6 +169,23 @@ map({ "n", "x" }, "<leader>ym", cp("markdown"), { desc = "Copy as Markdown block
 map("n", "<leader>yp", cp("relative"), { desc = "Copy relative path" })
 map("n", "<leader>yi", cp("import"), { desc = "Copy import line" })
 map("n", "<leader>fy", cp("history"), { desc = "Clipboard history" })
+
+-- Git, JetBrains-style: one menu plus direct keys. See config/vcs.lua.
+local vcs = function(fn, ...)
+  local args = { ... }
+  return function() require("config.vcs")[fn](unpack(args)) end
+end
+map("n", "<leader>gv", vcs("menu"), { desc = "Git menu (add, rollback, stash, commit…)" })
+map("n", "<leader>gA", vcs("add"), { desc = "Add this file" })
+map("n", "<leader>gR", vcs("rollback"), { desc = "Rollback this file" })
+map("n", "<leader>gk", vcs("commit", false), { desc = "Commit…" })
+map("n", "<leader>gK", vcs("commit", true), { desc = "Commit and push…" })
+map("n", "<leader>gp", vcs("push"), { desc = "Push" })
+map("n", "<leader>gP", vcs("pull"), { desc = "Pull (rebase)" })
+map("n", "<leader>gn", vcs("branches"), { desc = "Branches (switch / new)" })
+map("n", "<leader>gS", vcs("stash"), { desc = "Stash changes" })
+map("n", "<leader>gU", vcs("unstash"), { desc = "Unstash (pop / apply / drop)" })
+map("n", "<leader>gz", vcs("undo_commit"), { desc = "Undo last commit (keep changes)" })
 
 -- Compare: before / after, and two repos at once ----------------------------
 -- See config/compare.lua. Every comparison opens in its own tab.

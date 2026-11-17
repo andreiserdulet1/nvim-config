@@ -4,3 +4,4 @@
 # direnv: .envrc lives inside a project and can hold credentials.
 .envrc
 .direnv/
+*.nvim-focus.spec.ts

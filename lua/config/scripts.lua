@@ -136,6 +136,7 @@ local function test_script(scripts)
   if scripts["test"] then return "test", true end
   return nil, false
 end
+M.test_script = test_script
 
 --- Run only the current component's spec (or that of `path`).
 ---@param path string|nil a component file; defaults to the current buffer

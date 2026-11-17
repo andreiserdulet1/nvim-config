@@ -174,13 +174,14 @@ end
 local function shell_branches()
   local ok, out = git(M.shell_ui, {
     "for-each-ref", "--sort=-committerdate",
-    "--format=%(refname:short)\t%(committerdate:relative)\t%(HEAD)",
+    "--format=%(refname:short)\t%(committerdate:relative)\t%(HEAD)\t.",
     "refs/heads", "refs/remotes/origin",
   })
   if not ok then return nil end
   local list, seen = {}, {}
   for line in out:gmatch("[^\n]+") do
-    local ref, when, head = line:match("^(.-)\t(.-)\t(.*)$")
+    -- The trailing "." keeps a blank HEAD field from being trimmed away.
+    local ref, when, head = line:match("^(.-)\t(.-)\t(.-)\t%.$")
     if ref and ref ~= "origin/HEAD" and ref ~= "origin" then
       local short = ref:gsub("^origin/", "")
       if not seen[short] then
