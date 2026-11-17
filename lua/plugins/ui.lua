@@ -1,4 +1,6 @@
 -- Colours, statusline, buffer tabs, and the start screen.
+local icons = require("config.icons")
+
 return {
 
   -- Colourschemes live in colors/ and lua/scheme/, not here: they ship with
@@ -16,14 +18,27 @@ return {
       options = {
         theme = "auto",   -- follow whatever colorscheme is active
         globalstatus = true,
-        section_separators = { left = "", right = "" },
-        component_separators = { left = "", right = "" },
+        section_separators = {
+          left = icons.separator.section_left, right = icons.separator.section_right,
+        },
+        component_separators = {
+          left = icons.separator.component_left, right = icons.separator.component_right,
+        },
       },
       sections = {
         lualine_a = { "mode" },
-        lualine_b = { "branch" },
+        -- on_click turns each component that names a thing into a way of
+        -- opening it: the branch is where lazygit lives, the diagnostic count
+        -- is the Trouble list, the diff stat is the diffview. Same destinations
+        -- as <leader>gg, <leader>xx and <leader>gd, reachable without them.
+        lualine_b = {
+          { "branch", on_click = function() vim.cmd("LazyGit") end },
+        },
         lualine_c = {
-          { "diagnostics" },
+          {
+            "diagnostics",
+            on_click = function() vim.cmd("Trouble diagnostics toggle filter.buf=0") end,
+          },
           { "filename", path = 1 },  -- relative path, so you know which module
         },
         lualine_x = {
@@ -36,13 +51,14 @@ return {
               end
               return table.concat(names, " ")
             end,
-            icon = " ",
+            on_click = function() vim.cmd("checkhealth vim.lsp") end,
+            icon = icons.lsp,
             -- Was a hard-coded #7aa2f7 -- tokyonight's blue, which outlived that
             -- theme's removal and sat as a stray cool note in four warm
             -- statuslines. Linked instead, so it follows whatever is active.
             color = "Function",
           },
-          { "diff" },
+          { "diff", on_click = function() vim.cmd("DiffviewOpen") end },
           { "filetype" },
         },
         lualine_y = { "progress" },
@@ -97,13 +113,25 @@ return {
         always_show_bufferline = true,
         show_buffer_close_icons = true,
         separator_style = "slant",
+        -- Reveal the close button on the tab under the pointer. Needs
+        -- mousemoveevent, set in config/options.lua.
+        hover = { enabled = true, delay = 200, reveal = { "close" } },
+        -- Every mouse route to closing a buffer goes through Snacks.bufdelete,
+        -- for the same reason <leader>bd does: bufferline's default is
+        -- `bdelete! %d`, which takes the split down with the buffer. The
+        -- keyboard already did the right thing here and the mouse did not.
+        close_command = function(n) require("snacks").bufdelete(n) end,
+        right_mouse_command = function(n) require("snacks").bufdelete(n) end,
+        middle_mouse_command = function(n) require("snacks").bufdelete(n) end,
         -- No neo-tree offset: bufferline offsets only reserve space on the LEFT
         -- edge, and the tree now opens on the right. Leaving it in would indent
         -- the tab bar on the side the tree is not on.
         diagnostics_indicator = function(_, _, diag)
           local s = {}
-          if diag.error then table.insert(s, " " .. diag.error) end
-          if diag.warning then table.insert(s, " " .. diag.warning) end
+          -- Same codicons as the diagnostic signs in options.lua, so the
+          -- gutter and the tab bar agree about what an error looks like.
+          if diag.error then table.insert(s, icons.diagnostic.error .. diag.error) end
+          if diag.warning then table.insert(s, icons.diagnostic.warn .. diag.warning) end
           return table.concat(s, " ")
         end,
       },
@@ -142,6 +170,11 @@ return {
             ["DiffviewFiles"] = true, ["DiffviewFileHistory"] = true,
           }
           if skip[ft] or vim.bo[buf].buftype ~= "" then return false end
+          -- Nor in a diff window. The merge view labels its own panes -- which
+          -- side each one is, and which conflict you are on (config/conflicts)
+          -- -- and a breadcrumb would just overwrite that with the file name
+          -- you already know, three times over.
+          if vim.wo[win].diff then return false end
           return true
         end,
       },
@@ -175,11 +208,28 @@ return {
     "folke/snacks.nvim",
     priority = 900,
     lazy = false,
+    init = function()
+      -- The dashboard already snaps the cursor to the nearest entry as it
+      -- moves, so a click lands on one -- there was just no way to then run it
+      -- without reaching for its letter. <cr> is mapped buffer-locally by the
+      -- dashboard itself, so a double click can simply ask for it, and stays
+      -- correct if the entries in `preset.keys` below ever change.
+      vim.api.nvim_create_autocmd("FileType", {
+        group = vim.api.nvim_create_augroup("dashboard_click", { clear = true }),
+        pattern = "snacks_dashboard",
+        callback = function(ev)
+          vim.keymap.set("n", "<2-LeftMouse>", function()
+            vim.api.nvim_feedkeys(vim.keycode("<CR>"), "m", false)
+          end, { buffer = ev.buf, desc = "Run the entry under the pointer" })
+        end,
+      })
+    end,
     opts = {
       bigfile = { enabled = true },      -- disable heavy features on huge files
       notifier = { enabled = true, timeout = 3000 },
       quickfile = { enabled = true },
       indent = { enabled = true, scope = { enabled = false } },
+      words = { enabled = true },        -- highlight the symbol under the cursor, ]] / [[ to walk its references
       input = { enabled = true },
       -- ui_select only -- this does NOT replace Telescope, which still owns
       -- every <leader>f key. It exists so vim.ui.select (config/actions.lua,
@@ -189,28 +239,19 @@ return {
       dashboard = {
         enabled = true,
         preset = {
-          header = [[
-      ███╗   ██╗██╗   ██╗██╗███╗   ███╗
-      ████╗  ██║██║   ██║██║████╗ ████║
-      ██╔██╗ ██║██║   ██║██║██╔████╔██║
-      ██║╚██╗██║╚██╗ ██╔╝██║██║╚██╔╝██║
-      ██║ ╚████║ ╚████╔╝ ██║██║ ╚═╝ ██║
-      ╚═╝  ╚═══╝  ╚═══╝  ╚═╝╚═╝     ╚═╝
-                  angular · terraform]],
           keys = {
-            { icon = " ", key = "f", desc = "Find File", action = ":Telescope find_files" },
-            { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
-            { icon = " ", key = "g", desc = "Grep Text", action = ":Telescope live_grep" },
-            { icon = " ", key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
-            { icon = " ", key = "p", desc = "Projects", action = ":lua require('config.projects').pick()" },
-            { icon = " ", key = "?", desc = "Cheatsheet", action = ":lua require('config.cheatsheet').open()" },
-            { icon = " ", key = "j", desc = "Jira sprint", action = ":lua require('config.jira').sprint()" },
-            { icon = "󰒲 ", key = "l", desc = "Plugins", action = ":Lazy" },
-            { icon = " ", key = "q", desc = "Quit", action = ":qa" },
+            { icon = icons.dashboard.find, key = "f", desc = "Find File", action = ":Telescope find_files" },
+            { icon = icons.dashboard.new, key = "n", desc = "New File", action = ":ene | startinsert" },
+            { icon = icons.dashboard.grep, key = "g", desc = "Grep Text", action = ":Telescope live_grep" },
+            { icon = icons.dashboard.recent, key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
+            { icon = icons.dashboard.projects, key = "p", desc = "Projects", action = ":lua require('config.projects').pick()" },
+            { icon = icons.dashboard.cheatsheet, key = "?", desc = "Cheatsheet", action = ":lua require('config.cheatsheet').open()" },
+            { icon = icons.dashboard.jira, key = "j", desc = "Jira sprint", action = ":lua require('config.jira').sprint()" },
+            { icon = icons.dashboard.plugins, key = "l", desc = "Plugins", action = ":Lazy" },
+            { icon = icons.dashboard.quit, key = "q", desc = "Quit", action = ":qa" },
           },
         },
         sections = {
-          { section = "header" },
           { section = "keys", gap = 1, padding = 1 },
           { section = "startup" },
         },

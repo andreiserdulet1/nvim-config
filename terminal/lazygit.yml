@@ -1,0 +1,88 @@
+# lazygit, for the float that <leader>gg opens.
+#
+# Linked into place by terminal/install.sh. On macOS lazygit reads
+# ~/Library/Application Support/lazygit/config.yml; `lazygit --print-config-dir`
+# says where it is looking if XDG_CONFIG_HOME is ever set.
+#
+# The bias here is discoverability over density. Nothing in lazygit needs to be
+# memorised as long as `?` is one key away and the panels are big enough to
+# click: `?` lists every action valid in the focused panel, with its key,
+# navigable by arrows or by mouse.
+
+gui:
+  nerdFontsVersion: "3" # MesloLGL Nerd Font is installed
+  showFileTree: true
+  mainPanelSplitMode: flexible
+  sidePanelWidth: 0.25
+  # Mouse --------------------------------------------------------------------
+  # On by default; set explicitly so it is visible. Click a panel to focus it,
+  # click a row to select it, click a panel's tab strip to switch tabs, wheel to
+  # scroll. Neovim forwards all of that into the float because mouse = "a" is
+  # set in lua/config/options.lua.
+  mouseEvents: true
+  # A focused panel expands. sidePanelWidth 0.25 truncates branch and commit
+  # subjects, which makes them both unreadable and a small target to hit.
+  expandFocusedSidePanel: true
+  expandedSidePanelWeight: 2
+  # Feedback -----------------------------------------------------------------
+  # The command log shows the git command lazygit actually ran. Three lines is
+  # enough to see that a cherry-pick fired -- or that nothing did, which is the
+  # signal that was missing when V appeared to do nothing -- without giving the
+  # whole bottom panel back. `@` opens the extras menu for the full log.
+  showCommandLog: true
+  commandLogSize: 3
+  showBottomLine: true # the context-sensitive key hints along the bottom
+  showListFooter: true
+  showPanelJumps: true # the 1-5 badges on each panel
+  showRandomTip: false
+  # `/` forgives a half-remembered branch name.
+  filterMode: fuzzy
+  # Theme --------------------------------------------------------------------
+  # Named colours, not hex. Names resolve through ANSI 0-15, which
+  # lua/scheme/init.lua sets from the active palette, so Graphite, Heather,
+  # Malachite and Umber each repaint lazygit for free, light variants included.
+  # This block used to carry tokyonight's #7aa2f7 and outlived that theme's
+  # removal by two commits, which is what hex in here always does.
+  theme:
+    activeBorderColor:
+      - cyan
+      - bold
+    inactiveBorderColor:
+      - default
+    searchingActiveBorderColor:
+      - yellow
+      - bold
+    optionsTextColor:
+      - blue
+    selectedLineBgColor:
+      - blue
+    inactiveViewSelectedLineBgColor:
+      - bold
+    # Copied commits are the thing you lose track of mid-cherry-pick, so they
+    # get the loudest pair in the palette.
+    cherryPickedCommitFgColor:
+      - black
+    cherryPickedCommitBgColor:
+      - yellow
+    markedBaseCommitFgColor:
+      - black
+    markedBaseCommitBgColor:
+      - cyan
+    unstagedChangesColor:
+      - red
+    defaultFgColor:
+      - default
+git:
+  diffRenderers:
+    - colorArg: always
+      # delta, syntax-highlighted and unified. Not --side-by-side: the main
+      # panel under mainPanelSplitMode: flexible is too narrow for two columns.
+      # `|` cycles pagers at runtime if a wide diff ever wants one.
+      command: delta --dark --paging=never --line-numbers --hyperlinks
+  parseEmoji: false
+os:
+  # `e` on a file in lazygit opens it in Neovim.
+  editPreset: "nvim"
+confirmOnQuit: false
+quitOnTopLevelReturn: false
+disableStartupPopups: true

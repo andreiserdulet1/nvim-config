@@ -1,4 +1,6 @@
 -- Finding things, moving around, and the file tree.
+local icons = require("config.icons")
+
 return {
 
   -- Telescope: the fuzzy finder every <leader>f key routes through ----------
@@ -102,14 +104,16 @@ return {
           ["<space>"] = "none",   -- keep <space> as leader inside the tree
           ["l"] = "open",
           ["h"] = "close_node",
+          -- Right-click a file or folder for the operations that are otherwise
+          -- bare keys (a, A, r, d, c, m). Built in config/menu.lua, beside the
+          -- right-click menu for code, so there is one place that answers what
+          -- right-click does.
+          ["<RightMouse>"] = function(state) require("config.menu").tree(state) end,
         },
       },
       default_component_configs = {
         git_status = {
-          symbols = {
-            added = "", modified = "", deleted = "✖", renamed = "󰁕",
-            untracked = "", ignored = "", unstaged = "󰄱", staged = "", conflict = "",
-          },
+          symbols = icons.git_status,
         },
       },
     },
@@ -213,10 +217,27 @@ return {
   {
     "echasnovski/mini.nvim",
     event = "VeryLazy",
+    dependencies = {
+      -- Query files only, no keymaps of its own. mini.ai reads @function.outer
+      -- and @class.outer from here; nvim-treesitter's main branch ships
+      -- folds/highlights/indents but not textobjects, and without the queries
+      -- daf and vac fail silently rather than erroring.
+      { "nvim-treesitter/nvim-treesitter-textobjects", branch = "main" },
+    },
     config = function()
       require("mini.pairs").setup()      -- auto-close brackets and quotes
       require("mini.surround").setup()   -- gsa/gsd/gsr to add/delete/replace surroundings
-      require("mini.ai").setup()         -- better text objects: cif, daf, ci(, etc.
+
+      -- Better text objects: cif, daf, ci(, etc. Only f and c are overridden --
+      -- mini.ai's built-in `a` already handles arguments, so pointing it at
+      -- @parameter would lose ground rather than gain it.
+      local ai = require("mini.ai")
+      ai.setup({
+        custom_textobjects = {
+          f = ai.gen_spec.treesitter({ a = "@function.outer", i = "@function.inner" }),
+          c = ai.gen_spec.treesitter({ a = "@class.outer", i = "@class.inner" }),
+        },
+      })
       -- No mini.comment: gc / gcc are built into Neovim from 0.10 onwards.
     end,
   },

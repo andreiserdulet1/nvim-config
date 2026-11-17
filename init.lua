@@ -57,4 +57,5 @@ end
 
 require("config.lazy")
 require("config.keymaps")
+require("config.menu").setup()
 require("config.painting").setup()

@@ -15,6 +15,17 @@ brew "tree-sitter-cli"  # nvim-treesitter's main branch compiles parsers with th
 brew "lazygit"          # <leader>gg, the main git interface
 brew "gh"               # GitHub PRs (<leader>p) and Actions (<leader>A)
 
+# --- The font ---------------------------------------------------------------
+# Every icon in this config is a Nerd Font glyph: the dashboard, the statusline
+# separators, the git gutter, the diagnostic signs. Without a patched font they
+# all render as question marks.
+#
+# Homebrew installs it; it cannot select it. Point the terminal at "MesloLGL
+# Nerd Font Mono" afterwards, and run `:checkhealth nvim-config` to confirm --
+# its Terminal section prints a glyph probe. If you already installed Meslo by
+# hand, brew will tell you the files are there rather than overwriting them.
+cask "font-meslo-lg-nerd-font"   # MesloLG Nerd Font, what this config is tuned for
+
 # --- Jira -------------------------------------------------------------------
 # The whole <leader>j layer shells out to this: sprint, board, transitions,
 # assignment, comments. Its own config lives at ~/.config/.jira/.config.yml,

@@ -59,6 +59,7 @@ link tmux.conf     "$HOME/.tmux.conf"
 link dev           "$HOME/.local/bin/dev"
 link starship.toml "$HOME/.config/starship.toml"
 link git-ignore    "$HOME/.config/git/ignore"
+link lazygit.yml   "$HOME/Library/Application Support/lazygit/config.yml"
 
 # ~/.zshrc is checked, never written.
 echo

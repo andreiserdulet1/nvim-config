@@ -53,15 +53,31 @@ return {
         function()
           -- A terminal that always opens at the project root, so `yarn start`
           -- or `make plan` runs from the right directory.
+          local terms = require("toggleterm.terminal")
           local root = vim.fs.root(0, { ".git", "package.json", "terragrunt.hcl" }) or vim.uv.cwd()
-          require("toggleterm.terminal").Terminal
-            :new({ dir = root, direction = "float", hidden = true })
+          -- One shell per project root, reused: pressing this again returns you
+          -- to the shell you left rather than starting a fresh one beside it.
+          local existing = terms.find(function(t)
+            return t.project_shell and vim.fs.normalize(t.dir or "") == vim.fs.normalize(root)
+          end)
+          if existing then
+            existing:toggle()
+            return
+          end
+          terms.Terminal
+            :new({
+              dir = root,
+              direction = "float",
+              hidden = true,
+              display_name = "shell @ " .. vim.fs.basename(root),
+              project_shell = true,
+            })
             :toggle()
         end,
         desc = "Terminal at project root",
       },
       -- Switching between terminals
-      { "<leader>tl", "<cmd>TermSelect<cr>", desc = "List / switch terminals" },
+      { "<leader>tl", "<cmd>TermSelect!<cr>", desc = "List / switch terminals" },
       { "<leader>t1", "<cmd>1ToggleTerm<cr>", desc = "Terminal 1" },
       { "<leader>t2", "<cmd>2ToggleTerm<cr>", desc = "Terminal 2" },
       { "<leader>t3", "<cmd>3ToggleTerm<cr>", desc = "Terminal 3" },
@@ -71,7 +87,7 @@ return {
           -- Close the terminal you're looking at, whether you're inside it or
           -- it's just the last one you opened.
           local terms = require("toggleterm.terminal")
-          local current = terms.get(terms.get_focused_id and terms.get_focused_id() or nil)
+          local current = terms.get(terms.get_focused_id(), true)
           if not current then
             local all = terms.get_all(true)
             current = all[#all]

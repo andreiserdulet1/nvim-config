@@ -34,6 +34,20 @@ opt.splitright = true        -- vertical splits open to the right
 opt.splitbelow = true
 opt.splitkeep = "screen"     -- don't scroll existing text when splitting
 
+-- Folding --------------------------------------------------------------------
+-- Treesitter knows where a method or a template block ends, so it folds far
+-- better than indent does. Safe to set globally: foldexpr returns 0 for a
+-- buffer with no parser, which means no folds rather than an error -- which is
+-- also what happens to a file the bigfile guard has stripped treesitter from.
+opt.foldmethod = "expr"
+opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+opt.foldtext = ""            -- show the real line, highlighted, not "+--  12 lines"
+opt.foldlevelstart = 99      -- files open unfolded; za closes what you want closed
+-- "auto:1", not "1": the column appears only in a buffer that actually has
+-- folds, so most files keep the gutter they had. Where it does appear, clicking
+-- a marker opens or closes the fold -- folding without knowing za.
+opt.foldcolumn = "auto:1"
+
 -- Files ----------------------------------------------------------------------
 opt.undofile = true          -- undo history survives closing the file
 opt.undolevels = 10000
@@ -43,15 +57,43 @@ opt.updatetime = 200         -- faster CursorHold -> quicker diagnostics/git sig
 opt.timeoutlen = 400         -- how long which-key waits before showing itself
 opt.confirm = true           -- prompt instead of failing on :q with unsaved changes
 
+-- persistence.nvim saves exactly what this names. The default includes
+-- `terminal`, which restores the toggleterm floats, and `blank`, which restores
+-- empty windows -- neither is worth carrying across a restart. `globals` is
+-- left out on purpose: it would persist vim.g.disable_autoformat, so turning
+-- format-on-save off once with <leader>uf would silently keep it off tomorrow.
+opt.sessionoptions = "buffers,curdir,folds,help,tabpages,winsize"
+
 -- Completion -----------------------------------------------------------------
 opt.completeopt = "menu,menuone,noselect"
 
 -- Misc -----------------------------------------------------------------------
 opt.mouse = "a"
+-- Report pointer movement, not just clicks. Hover effects depend on it: the
+-- close button that appears on the bufferline tab under the pointer, and
+-- dropbar highlighting the crumb you are about to click.
+opt.mousemoveevent = true
+-- Finer than the default ver:3,hor:6, which overshoots on a trackpad.
+opt.mousescroll = "ver:2,hor:4"
+-- mousemodel stays at its default popup_setpos: right-click moves the cursor
+-- first and then opens the menu, so the entries in config/menu.lua act on the
+-- thing under the pointer rather than wherever the cursor happened to be.
 opt.clipboard = "unnamedplus"  -- share the system clipboard with macOS
 opt.inccommand = "split"       -- live preview of :%s/foo/bar
 opt.virtualedit = "block"      -- let visual-block go past end of line
 opt.shortmess:append("cI")     -- quieter messages, no intro screen
+
+-- Icons ----------------------------------------------------------------------
+-- Every icon in this config is a Nerd Font glyph, and a terminal not using a
+-- patched font draws each one as a boxed question mark. This flag picks between
+-- the glyphs and plain-text stand-ins; config/icons.lua holds both sets.
+--
+-- Set it to true once the glyph probe in `:checkhealth nvim-config` renders as
+-- icons. It has to be set before any plugin spec is evaluated, which is why it
+-- lives here rather than inside the module it controls.
+vim.g.have_nerd_font = false
+
+local icons = require("config.icons")
 
 -- Diagnostics ----------------------------------------------------------------
 vim.diagnostic.config({
@@ -62,17 +104,52 @@ vim.diagnostic.config({
   float = { border = "rounded", source = true },
   signs = {
     text = {
-      [vim.diagnostic.severity.ERROR] = " ",
-      [vim.diagnostic.severity.WARN]  = " ",
-      [vim.diagnostic.severity.HINT]  = " ",
-      [vim.diagnostic.severity.INFO]  = " ",
+      [vim.diagnostic.severity.ERROR] = icons.diagnostic.error,
+      [vim.diagnostic.severity.WARN]  = icons.diagnostic.warn,
+      [vim.diagnostic.severity.HINT]  = icons.diagnostic.hint,
+      [vim.diagnostic.severity.INFO]  = icons.diagnostic.info,
     },
   },
 })
 
+local function augroup(name)
+  return vim.api.nvim_create_augroup(name, { clear = true })
+end
+
 -- Highlight text briefly when yanked, so you can see what you copied.
 vim.api.nvim_create_autocmd("TextYankPost", {
   callback = function() vim.hl.on_yank({ timeout = 150 }) end,
+})
+
+-- Pick up files that changed underneath the editor. `autoread` is already on by
+-- default, but it only re-reads when something asks, and `checktime` is the
+-- ask -- so on its own it never fires. Claude, `ng generate`, lazygit branch
+-- switches and prettier all write behind the buffer's back; without this the
+-- stale text sits there until it collides with your next save.
+--
+-- TermClose/TermLeave are in the list because the <leader>n and <leader>ng
+-- runners all finish inside a toggleterm float: stepping out of that float is
+-- exactly the moment the tree on disk has moved.
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "TermClose", "TermLeave" }, {
+  group = augroup("reload_changed"),
+  callback = function(ev)
+    if vim.fn.mode() == "c" then return end           -- not mid command-line
+    if vim.bo[ev.buf].buftype ~= "" then return end   -- not terminals or prompts
+    if vim.api.nvim_buf_get_name(ev.buf) == "" then return end
+    -- Scheduled deliberately. `checktime` inside an autocmd callback is blocked
+    -- by the textlock and silently does nothing -- the buffer keeps the stale
+    -- text and no error is raised. Deferring it out of the callback is what
+    -- makes the re-read actually happen.
+    vim.schedule(function() vim.cmd.checktime() end)
+  end,
+})
+
+-- Say so, rather than silently swapping the text under the cursor.
+vim.api.nvim_create_autocmd("FileChangedShellPost", {
+  group = augroup("reload_changed_notify"),
+  callback = function()
+    vim.notify("Reloaded — the file changed outside Neovim")
+  end,
 })
 
 -- Angular component templates get their own filetype so the Angular language
@@ -124,5 +201,22 @@ vim.api.nvim_create_autocmd("BufReadPost", {
       pcall(vim.api.nvim_win_set_cursor, 0, mark)
       vim.cmd("normal! zz")
     end
+  end,
+})
+
+-- Spell-checking where the words are read by someone else: commit messages and
+-- markdown, including the Jira comment composer. Code buffers are untouched.
+--
+-- The `modifiable` test is doing real work. jira.lua's comment composer and its
+-- read-only issue view are both scratch buffers with filetype "markdown", so
+-- buftype cannot separate them -- but the view is not modifiable. This spells
+-- what you are writing and leaves what you are only reading alone.
+vim.api.nvim_create_autocmd("FileType", {
+  group = augroup("prose"),
+  pattern = { "markdown", "gitcommit" },
+  callback = function(ev)
+    if not vim.bo[ev.buf].modifiable then return end
+    vim.opt_local.spell = true
+    vim.opt_local.spelllang = "en_gb"
   end,
 })

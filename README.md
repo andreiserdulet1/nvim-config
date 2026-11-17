@@ -20,6 +20,12 @@ brew bundle --file=~/.config/nvim/Brewfile
 nvim
 ```
 
+`brew bundle` installs **MesloLG Nerd Font**, which every icon in this config
+depends on — but Homebrew cannot select it for you. Set your terminal's font to
+*MesloLGL Nerd Font Mono* before the first launch, or the dashboard, the
+statusline separators, the git gutter and the diagnostic signs will all render
+as question marks. `:checkhealth nvim-config` prints a glyph probe to confirm.
+
 `install.sh` symlinks the tmux config, the `dev` session launcher, the starship
 prompt and the global gitignore into place. It backs up anything already there and
 **refuses** to overwrite a file you have edited locally, showing the diff instead.
@@ -373,6 +379,23 @@ logs and watching all work without it.
 `<Space>js` is the current sprint, `<Space>jb` is the board a column at a time,
 `<Space>jm` is your own open issues, `<Space>jf` searches.
 
+`<Space>jf` also jumps. Typing an issue key opens that issue instead of running
+a text search for its name — `AR-991`, lowercase `ar-991`, or just `991`, which
+is resolved against the project jira-cli is configured for. A key from another
+project works too: `jira issue view` takes the key itself, so the jump is not
+scoped to the current sprint, the board, or even the configured project.
+Anything that is not a key is searched instead, using JQL's `text` field —
+summary, description **and comments** — so an issue whose title says nothing but
+whose comments say everything is still findable. The term gets a trailing `*`,
+so `round` finds `rounding`.
+
+It is worth knowing how this differs from the board's filter box. `~` is a
+full-text index, not a substring match: it matches whole words and prefixes, and
+Jira rejects a *leading* wildcard outright, so `ing` will never find `rounding`.
+For true substring filtering, load a list first — `<Space>js` or `<Space>jb` —
+and type in the picker, which filters on key, status, assignee and summary
+together over the issues already fetched.
+
 All four open a picker with a **preview pane that reads the whole issue** as you
 move down the list — description, every comment, and the fields the board hides:
 sprint, story points, epic, subtasks and linked issues. It is rendered as
@@ -447,9 +470,10 @@ address, and nothing should.**
 
 ### Sessions and breadcrumbs
 
-`<Space>qs` restores the session for the repo you're in — buffers, splits and
-cursor positions. `<Space>ql` restores the last one you had open anywhere,
-`<Space>qd` stops the current one being saved.
+`<Space>qs` restores the session for the repo you're in — buffers, splits, folds
+and cursor positions. `<Space>ql` restores the last one you had open anywhere,
+`<Space>qd` stops the current one being saved. Terminals are deliberately left
+out: restoring a dead shell in a float is never what you wanted.
 
 The winbar shows `Class > method` for the file you're in; `<Space>;` jumps through
 it. It's suppressed in the tree, terminals, lists and diff views.
@@ -466,6 +490,57 @@ Terminals: `<Space>tt` floats one, `<Space>tn` opens one at the project root,
 
 And `q` closes the read-only windows that otherwise strand you — help, quickfix,
 `:checkhealth`, `:LspInfo`, blame.
+
+### Fonts and icons
+
+The icons are Nerd Font glyphs, and they only exist in a *patched* font. If you
+see question marks instead — in the dashboard, the gutter, the statusline, the
+file tree — the terminal is not using one. `:checkhealth nvim-config` says
+whether a Nerd Font is installed and prints a probe across the four codepoint
+ranges that fail independently, so you can tell "no font" from "wrong font".
+
+Being installed is not the same as being selected. In iTerm2 the setting is
+**Settings → Profiles → Text → Font**, with *"use a different font for
+non-ASCII text"* left unchecked, and a font change only reaches sessions started
+after it — quit and reopen the terminal rather than opening a new tab.
+
+The git gutter is deliberately exempt: its marks are plain block characters
+(`▎`, `▁`, `▔`) that render in any font, so the one signal you read constantly
+survives a broken font.
+
+**If you would rather not depend on the font at all**, there is a switch:
+
+```lua
+vim.g.have_nerd_font = false   -- lua/config/options.lua
+```
+
+`false` — the default — gives plain-text stand-ins everywhere: `E` `W` `H` `I`
+for the diagnostic signs, a thin `│` between statusline components and no
+section separator, `+ ~ ? *` for the file tree's git column. Nothing is lost
+except decoration, and it renders in any terminal, including one you ssh into
+or do not control. Flip it to `true` for the glyphs. Both sets live in
+`lua/config/icons.lua`, one table each, with the codepoints in the comments so a
+glyph that goes missing is still recoverable from a diff.
+
+### Folds, the quickfix list, and files that move underneath you
+
+Folding is treesitter's, not indentation's, so it folds where a method or a
+template block actually ends. Files open unfolded; `za` toggles the block under
+the cursor, `zM` collapses everything to its headings and `zR` opens it all back
+up. On a filetype with no parser there are simply no folds rather than an error.
+
+`]q` and `[q` walk the quickfix list and wrap at either end. Three things fill
+that list — merge conflicts from `<Space>gX`, search results sent from grug-far,
+and whatever `<Space>xq` last opened — so it is worth being able to step through.
+
+**Files that change outside the editor are picked up automatically.** `ng
+generate`, a lazygit branch switch, prettier on save and Claude's edits all write
+behind the buffer's back; the buffer re-reads when you come back to it and says
+so. Nothing is silently discarded — a buffer with unsaved changes still prompts.
+
+Markdown and commit messages are spell-checked, including the Jira comment
+composer; `z=` offers corrections. Code buffers are untouched, and so is the
+read-only issue view — only what you are actually writing gets underlined.
 
 ---
 

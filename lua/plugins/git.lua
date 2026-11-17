@@ -23,6 +23,27 @@ return {
       vim.g.lazygit_floating_window_scaling_factor = 0.95
       vim.g.lazygit_floating_window_border_chars = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }
       vim.g.lazygit_use_neovim_remote = 0
+
+      -- <C-h/j/k/l> step between splits from terminal mode (config/keymaps.lua),
+      -- which means they never reach a program running in one. lazygit binds
+      -- <C-j>/<C-k> to move a commit down/up in an interactive rebase and <C-l>
+      -- to the log menu, so inside this float they were silently dead. They are
+      -- worth more to lazygit than to window navigation here: you leave the
+      -- float with `q`, not by stepping sideways out of it. Buffer-local maps
+      -- win over global ones, so this scopes the exception to lazygit alone.
+      vim.api.nvim_create_autocmd("TermOpen", {
+        group = vim.api.nvim_create_augroup("lazygit_passthrough", { clear = true }),
+        callback = function(ev)
+          -- lazygit.nvim starts the job with jobstart({ term = true }), so the
+          -- buffer is named term://<cwd>//<pid>:<path to lazygit>.
+          if not vim.api.nvim_buf_get_name(ev.buf):match("lazygit") then
+            return
+          end
+          for _, key in ipairs({ "<C-h>", "<C-j>", "<C-k>", "<C-l>" }) do
+            vim.keymap.set("t", key, key, { buffer = ev.buf, desc = "Pass through to lazygit" })
+          end
+        end,
+      })
     end,
   },
 
@@ -34,8 +55,10 @@ return {
       signs = {
         add = { text = "▎" },
         change = { text = "▎" },
-        delete = { text = "" },
-        topdelete = { text = "" },
+        -- Blocks rather than Nerd glyphs, to match the "▎" above: the gutter
+        -- stays legible even in a terminal without a patched font.
+        delete = { text = "▁" },
+        topdelete = { text = "▔" },
         changedelete = { text = "▎" },
         untracked = { text = "▎" },
       },
@@ -128,7 +151,27 @@ return {
     },
     opts = {
       enhanced_diff_hl = true,
-      view = { merge_tool = { layout = "diff3_mixed" } },
+      view = {
+        merge_tool = {
+          -- OURS | the file you are producing | THEIRS, side by side: the same
+          -- arrangement WebStorm's merge dialog uses, and the one the mouse
+          -- support in config/conflicts.lua is written for -- what you click is
+          -- always in the middle, and the side you took it from is beside it.
+          -- diff3_mixed put the result underneath, which reads as a summary of
+          -- the two panes above rather than as the thing you are editing.
+          layout = "diff3_horizontal",
+        },
+      },
+      hooks = {
+        -- Make the middle pane clickable. The hook fires per window, and
+        -- attach() decides whether this is the pane it means.
+        diff_buf_win_enter = function(bufnr, winid, ctx)
+          require("config.conflicts").attach(bufnr, winid, ctx)
+        end,
+        view_closed = function(view)
+          require("config.conflicts").forget(view)
+        end,
+      },
     },
   },
 }

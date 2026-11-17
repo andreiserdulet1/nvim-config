@@ -45,6 +45,32 @@ function M.login()
   return nil
 end
 
+-- `key:` out of the same file, one level deeper: jira-cli writes it indented
+-- under `project:`. Same reasoning as M.login() -- this is two scalars out of a
+-- file jira-cli owns, not a reason to take a YAML parser as a dependency.
+local project_cache
+function M.project()
+  if project_cache then return project_cache end
+  if vim.fn.filereadable(CONFIG) == 0 then return nil end
+  local ok, lines = pcall(vim.fn.readfile, CONFIG)
+  if not ok then return nil end
+  local inside = false
+  for _, line in ipairs(lines) do
+    if line:match("^project:") then
+      inside = true
+    elseif inside then
+      local value = line:match("^%s+key:%s*(.+)$")
+      if value then
+        project_cache = (vim.trim(value):gsub("^['\"]", ""):gsub("['\"]$", ""):upper())
+        return project_cache
+      end
+      -- An unindented line means the project block is over.
+      if line:match("^%S") then inside = false end
+    end
+  end
+  return nil
+end
+
 --- How to fix a missing credential, as one message the reader can act on.
 local function setup_hint(account)
   return table.concat({
@@ -81,7 +107,7 @@ end
 
 --- Forget the cached token, for when you have just rotated it.
 function M.forget()
-  token_cache, login_cache = nil, nil
+  token_cache, login_cache, project_cache = nil, nil, nil
   vim.notify("Jira token forgotten; it will be re-read from the Keychain")
 end
 
@@ -210,6 +236,23 @@ local function branch_key()
   return vim.trim(res.stdout or ""):match(KEY_PATTERN)
 end
 
+--- Read a string as an issue key, if that is what it is.
+---
+--- Accepts "AR-991", "ar-991", "#991" and a bare "991" -- the last two resolved
+--- against the project jira-cli is configured for, because typing the prefix
+--- you always type is the part worth dropping.
+---@return string|nil key
+local function as_key(text)
+  text = vim.trim(text or ""):upper()
+  if text:match("^" .. KEY_PATTERN .. "$") then return text end
+  local number = text:match("^#?(%d+)$")
+  if number then
+    local project = M.project()
+    if project then return project .. "-" .. number end
+  end
+  return nil
+end
+
 --- Resolve the issue in play: this branch's, else the one under the cursor,
 --- else ask. Async, because the last case has to prompt.
 ---@param callback fun(key: string)
@@ -221,11 +264,11 @@ function M.current(callback)
   if word then callback(word) return end
 
   vim.ui.input({ prompt = "Issue key: " }, function(answer)
-    answer = answer and vim.trim(answer):upper() or ""
-    if answer:match("^" .. KEY_PATTERN .. "$") then
-      callback(answer)
-    elseif answer ~= "" then
-      vim.notify(answer .. " is not an issue key", vim.log.levels.WARN)
+    local resolved = as_key(answer)
+    if resolved then
+      callback(resolved)
+    elseif answer and vim.trim(answer) ~= "" then
+      vim.notify(vim.trim(answer) .. " is not an issue key", vim.log.levels.WARN)
     end
   end)
 end
@@ -922,14 +965,37 @@ function M.board()
   end)
 end
 
---- Free-text search across the project.
+--- Free-text search across the project -- or a jump, when what you typed is an
+--- issue key.
+---
+--- "AR-991" as a search term matches the issues that mention AR-991, which is
+--- never what you wanted when you typed it: you wanted AR-991. So a key opens
+--- the issue, and everything else searches. A bare "991" counts as a key too,
+--- resolved against the configured project.
 function M.search()
-  vim.ui.input({ prompt = "Search issues: " }, function(text)
+  vim.ui.input({ prompt = "Search issues (or an issue key): " }, function(text)
     if not text or vim.trim(text) == "" then return end
+
+    local key = as_key(text)
+    if key then M.view(key) return end
+
     -- Quotes would terminate the JQL string early and change the query.
-    local safe = text:gsub('"', "")
-    local jql = string.format('summary ~ "%s" OR description ~ "%s" ORDER BY updated DESC', safe, safe)
-    show_list("Search: " .. text, function() return M.jql_issues(jql) end)
+    local term = vim.trim(text):gsub('"', "")
+
+    -- `text ~` is the field Jira's own search box uses: summary, description,
+    -- comments and environment at once, rather than the summary and description
+    -- this checked before. An issue whose title says nothing but whose comments
+    -- say everything is exactly the one you are trying to find again.
+    --
+    -- The trailing * makes it prefix-matching, so "round" finds "rounding".
+    -- That is half of what the board's filter box does and all Jira will give:
+    -- `~` is a full-text index, so it matches whole words, and a LEADING
+    -- wildcard is rejected outright -- "ing" will never find "rounding".
+    -- Skipped when you have written a wildcard yourself.
+    if not term:find("*", 1, true) then term = term .. "*" end
+
+    local jql = string.format('text ~ "%s" ORDER BY updated DESC', term)
+    show_list("Search: " .. vim.trim(text), function() return M.jql_issues(jql) end)
   end)
 end
 

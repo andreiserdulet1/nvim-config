@@ -206,12 +206,33 @@ map("n", "]d", function() vim.diagnostic.jump({ count = 1 }) end, { desc = "Next
 map("n", "[d", function() vim.diagnostic.jump({ count = -1 }) end, { desc = "Prev diagnostic" })
 map("n", "<leader>cd", vim.diagnostic.open_float, { desc = "Line diagnostics" })
 
+-- Quickfix -------------------------------------------------------------------
+-- conflicts.lua fills this list, grug-far sends search results to it and
+-- <leader>xq opens it in Trouble -- three ways in and, until now, no way to
+-- walk it. `cnext` past the last entry is an error rather than a wrap, so
+-- catch that and go round.
+local function qf_step(forward)
+  return function()
+    if vim.tbl_isempty(vim.fn.getqflist()) then
+      vim.notify("Quickfix list is empty")
+      return
+    end
+    if not pcall(vim.cmd, forward and "cnext" or "cprev") then
+      vim.cmd(forward and "cfirst" or "clast")
+    end
+  end
+end
+map("n", "]q", qf_step(true), { desc = "Next quickfix" })
+map("n", "[q", qf_step(false), { desc = "Prev quickfix" })
+
 -- Terminal mode --------------------------------------------------------------
 map("t", "<C-/>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 map("t", "<C-_>", "<C-\\><C-n>", { desc = "Exit terminal mode (tmux)" })
 
 -- Move straight out of a terminal into an adjacent split, without having to
--- leave terminal mode first.
+-- leave terminal mode first. The one exception is the lazygit float, which
+-- wants <C-j>/<C-k>/<C-l> for itself -- plugins/git.lua maps them back,
+-- buffer-locally, on that terminal only.
 map("t", "<C-h>", "<C-\\><C-n><C-w>h", { desc = "Window left" })
 map("t", "<C-j>", "<C-\\><C-n><C-w>j", { desc = "Window down" })
 map("t", "<C-k>", "<C-\\><C-n><C-w>k", { desc = "Window up" })

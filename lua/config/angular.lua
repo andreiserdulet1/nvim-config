@@ -336,6 +336,8 @@ function M.palette()
           direction = "float",
           close_on_exit = false,
           hidden = true,
+          -- Without this the terminal list shows the whole binary path.
+          display_name = "ng " .. table.concat(args, " "),
         })
         :toggle()
     end

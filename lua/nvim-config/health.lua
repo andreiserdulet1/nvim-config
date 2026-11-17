@@ -41,6 +41,36 @@ local function mason_bin()
   return vim.fn.stdpath("data") .. "/mason/bin"
 end
 
+-- Find an installed Nerd Font, if there is one.
+--
+-- Probing by charset rather than by name is the point: it asks "is there a
+-- font on this machine that actually has the terminal icon in it", which is
+-- the question that matters, and it does not care what the family is called.
+-- fc-list comes with fontconfig, which arrives with the imagemagick the
+-- Brewfile already installs -- but the filename scan is there for a machine
+-- that has the font and not fontconfig.
+local function nerd_font()
+  if vim.fn.executable("fc-list") == 1 then
+    local out = vim.fn.system({ "fc-list", ":charset=f489", "family" })
+    if vim.v.shell_error == 0 then
+      for line in out:gmatch("[^\n]+") do
+        if line:lower():find("nerd font", 1, true) then
+          return (vim.split(line, ",")[1]:gsub("%s+$", ""))
+        end
+      end
+    end
+  end
+  for _, dir in ipairs({ (vim.env.HOME or "") .. "/Library/Fonts", "/Library/Fonts" }) do
+    local ok, iter = pcall(vim.fs.dir, dir)
+    if ok then
+      for name in iter do
+        if name:find("Nerd", 1, true) then return name .. "  (" .. dir .. ")" end
+      end
+    end
+  end
+  return nil
+end
+
 function M.check()
   ---------------------------------------------------------------------------
   health.start("Neovim itself")
@@ -129,6 +159,42 @@ function M.check()
   else
     health.warn("termguicolors is off; colours will look wrong")
   end
+
+  -- Every icon in this config is a Nerd Font glyph. Whether one is INSTALLED
+  -- can be answered here. Whether the terminal is actually USING it cannot:
+  -- Neovim writes to the terminal and never sees what was rasterised, so no
+  -- amount of Lua can detect a question mark. This does the half it can, and
+  -- prints the other half for you to look at.
+  local font = nerd_font()
+  if vim.g.have_nerd_font then
+    health.info("vim.g.have_nerd_font = true — icons are Nerd Font glyphs")
+  else
+    health.info("vim.g.have_nerd_font = false — icons are plain-text stand-ins. "
+      .. "Set it to true in config/options.lua once the probe below renders.")
+  end
+  if font then
+    health.ok("Nerd Font installed — " .. font)
+  else
+    health.warn("No Nerd Font found — every icon will render as a question mark", {
+      "brew bundle --file=~/.config/nvim/Brewfile",
+    })
+  end
+
+  -- Four ranges, because they fail independently: a v2-era font is missing the
+  -- Material Design glyph, and a terminal falling back to an unpatched font
+  -- loses all four. Seeing which ones survive tells you which problem you have.
+  health.info(table.concat({
+    "Glyph probe — each of these should be an icon, not a question mark:",
+    "    U+E0B0     powerline, the statusline separators",
+    "    U+EA87     codicon, the diagnostic signs",
+    "    U+F489     font-awesome, the terminal icon",
+    "    U+F0131 󰄱   material design, the git gutter",
+    "",
+    "A question mark means the terminal is not using the Nerd Font, even when",
+    "the check above says one is installed. In iTerm2 that is Settings →",
+    "Profiles → Text → Font, with \"use a different font for non-ASCII text\"",
+    "left unchecked. Quit and reopen the terminal fully afterwards.",
+  }, "\n"))
 
   ---------------------------------------------------------------------------
   health.start("Jira")
