@@ -74,6 +74,16 @@ return {
             end,
           },
           {
+            function() return require("config.check").statusline() end,
+            color = function()
+              local hl = require("config.check").statusline_hl()
+              return hl and { fg = Snacks.util.color(hl) } or nil
+            end,
+            on_click = function(_, button)
+              if button == "r" then require("config.check").all() else pcall(vim.cmd, "Trouble qflist toggle") end
+            end,
+          },
+          {
             function() return require("config.actions").ci_status() end,
             on_click = function() require("config.actions").list() end,
           },

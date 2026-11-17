@@ -32,6 +32,11 @@ M.items = {
   { "Test", "Run this spec with coverage", "<leader>nC", req("config.tests", "run_coverage") },
   { "Test", "Toggle coverage colours", "<leader>uC", req("config.tests", "coverage_show") },
   { "Test", "Send the failing test to Claude", "<leader>aF", req("config.tests", "send_failure") },
+  -- Checks
+  { "Check", "Check the project: types (incl. templates) + lint", "<leader>cc", req("config.check", "all") },
+  { "Check", "Type-check the project", "<leader>cy", req("config.check", "types") },
+  { "Check", "Lint the project", "<leader>cl", req("config.check", "lint") },
+  { "Check", "Toggle checks before push", "<leader>uP", req("config.check", "toggle_pre_push") },
   -- Claude
   { "Claude", "Show / hide Claude", "<leader>ac", req("config.claude", "toggle") },
   { "Claude", "Continue the last conversation", "<leader>aC", req("config.claude", "continue") },
@@ -125,6 +130,13 @@ M.items = {
   { "Angular", "Related: route, module, store, templates, usages", "<leader>or", req("config.related", "pick") },
   -- Toggles
   { "Toggle", "Light / dark", "<leader>ut", req("config.theme", "toggle_background") },
+  { "Toggle", "Auto-save", "<leader>ua", function()
+      vim.g.autosave = not vim.g.autosave
+      vim.notify("Auto-save: " .. (vim.g.autosave and "on" or "off"))
+    end },
+  { "Toggle", "Full diagnostics under the line", "<leader>ud", function()
+      vim.api.nvim_feedkeys(vim.keycode("<leader>ud"), "m", false)
+    end },
   { "Toggle", "Cheatsheet", "<leader>?", req("config.cheatsheet", "open") },
 }
 

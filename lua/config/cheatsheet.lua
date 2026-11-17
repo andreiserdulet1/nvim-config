@@ -170,6 +170,20 @@ M.sections = {
     },
   },
   {
+    "PROJECT CHECKS  (✓ checks / ✗ n in the statusline — click for the list)",
+    {
+      { "<leader>cc", "Types (ngc: TS + templates, specs) and lint, whole" },
+      { "", "project, in the background → quickfix / Trouble" },
+      { "<leader>cy / cl", "Just types / just lint" },
+      { "]q / [q", "Walk the problems" },
+      { "<leader>gp", "Push runs types, lint and tests first; if they" },
+      { "", "fail you can still push anyway" },
+      { "<leader>uP", "Turn the pre-push checks off / on" },
+      { "<leader>ua", "Auto-save on switching file / leaving the editor" },
+      { "<leader>ud", "Full error message under the cursor line" },
+    },
+  },
+  {
     "TESTS IN THE GUTTER  (a ▶ beside every describe / it in a spec)",
     {
       { "click ▶", "Run that test (or describe) on its own" },

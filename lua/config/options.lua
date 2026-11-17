@@ -97,8 +97,12 @@ vim.g.have_nerd_font = true
 local icons = require("config.icons")
 
 -- Diagnostics ----------------------------------------------------------------
+-- The line you're on shows its diagnostics in full, underneath it (Neovim
+-- 0.11+ virtual_lines); every other line keeps the short trailing text. No
+-- hovering to read a long TypeScript error. <leader>ud toggles the full form.
 vim.diagnostic.config({
-  virtual_text = { prefix = "●", spacing = 2 },
+  virtual_text = { prefix = "●", spacing = 2, current_line = false },
+  virtual_lines = { current_line = true },
   severity_sort = true,
   underline = true,
   update_in_insert = false,
@@ -219,5 +223,26 @@ vim.api.nvim_create_autocmd("FileType", {
     if not vim.bo[ev.buf].modifiable then return end
     vim.opt_local.spell = true
     vim.opt_local.spelllang = "en_gb"
+  end,
+})
+
+-- Auto-save -----------------------------------------------------------------
+-- Like JetBrains: a changed file is saved when you switch to another buffer or
+-- window, or when the editor loses focus (Cmd+Tab to the browser). The dev
+-- server and tests then always see what is on screen. Format-on-save runs as
+-- usual. <leader>ua toggles it.
+vim.g.autosave = true
+vim.api.nvim_create_autocmd({ "FocusLost", "BufLeave", "WinLeave" }, {
+  group = augroup("config_autosave"),
+  callback = function(ev)
+    if not vim.g.autosave then return end
+    local buf = ev.buf
+    if not vim.api.nvim_buf_is_valid(buf) or not vim.bo[buf].modified then return end
+    if vim.bo[buf].buftype ~= "" or not vim.bo[buf].modifiable or vim.bo[buf].readonly then return end
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name == "" or name:match("^%w+://") then return end
+    -- An existing file, or a new one in a folder that exists.
+    if not vim.uv.fs_stat(name) and not vim.uv.fs_stat(vim.fs.dirname(name)) then return end
+    vim.api.nvim_buf_call(buf, function() vim.cmd("silent! lockmarks update") end)
   end,
 })

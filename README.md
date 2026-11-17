@@ -628,6 +628,28 @@ have nothing to read until then.
 
 ---
 
+### Checking the whole project
+
+The language server only knows about files you have open. `<Space>cc` runs
+Angular's compiler (`ngc` — TypeScript **and templates**, the same strict checks
+`ng build` does), `tsc` over the specs, and ESLint over `src/`, side by side in
+the background — about 15 seconds on advertiser-payments-ui. Problems go to the
+quickfix list and open in Trouble; `]q` / `[q` walk them. The statusline shows
+`✓ checks` or `✗ 12` — click it for the list, right-click to run again.
+`<Space>cy` / `<Space>cl` run just types / just lint.
+
+**Before every push** (`<Space>gp`, *Commit and push*, the Git menu) the same
+checks run plus the headless test suite, and the push only happens if they
+pass — or if you choose *Push anyway*. `<Space>uP` turns that off. (lazygit's
+own push isn't gated.)
+
+**Auto-save:** a changed file is saved when you switch to another file or
+window, or when Neovim loses focus — so the dev server and tests always see what
+is on screen. `<Space>ua` toggles it.
+
+**Errors in full:** the line under the cursor shows its diagnostics in full
+underneath it; other lines keep the short version. `<Space>ud` toggles it.
+
 ### Tests in the gutter
 
 Open a spec and every `describe` and `it` has a **▶** in the gutter. **Click it**

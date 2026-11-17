@@ -159,7 +159,7 @@ function M.commit(push)
     end)
 end
 
-function M.push()
+local function do_push()
   local _, upstream = git({ "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}" })
   if upstream == "" or upstream:match("fatal") then
     local _, branch = git({ "rev-parse", "--abbrev-ref", "HEAD" })
@@ -167,6 +167,18 @@ function M.push()
   else
     git_async({ "push" }, "Pushed")
   end
+end
+
+--- Push -- after types, lint and the headless tests pass, unless that is
+--- turned off (<leader>uP). If they fail you can still push anyway.
+function M.push()
+  if not vim.g.check_before_push then do_push() return end
+  require("config.check").run({ tests = true }, function(ok)
+    if ok then do_push() return end
+    vim.ui.select({ "Don't push — fix it first", "Push anyway" }, { prompt = "Checks failed" }, function(c)
+      if c == "Push anyway" then do_push() end
+    end)
+  end)
 end
 
 function M.pull() git_async({ "pull", "--rebase", "--autostash" }, "Pulled") end

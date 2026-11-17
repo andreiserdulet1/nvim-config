@@ -175,6 +175,27 @@ map("n", "<leader>fy", cp("history"), { desc = "Clipboard history" })
 map("n", "<leader>uy", function() require("config.copy").toggle_copy_on_select() end,
   { desc = "Toggle copy on mouse select" })
 
+-- Whole-project checks (types incl. templates, lint) → quickfix / Trouble.
+-- Also run before every push. See config/check.lua.
+local chk = function(fn) return function() require("config.check")[fn]() end end
+map("n", "<leader>cc", chk("all"), { desc = "Check the project (types + lint)" })
+map("n", "<leader>cy", chk("types"), { desc = "Type-check the project (incl. templates)" })
+map("n", "<leader>cl", chk("lint"), { desc = "Lint the project" })
+map("n", "<leader>uP", chk("toggle_pre_push"), { desc = "Toggle checks before push" })
+
+map("n", "<leader>ua", function()
+  vim.g.autosave = not vim.g.autosave
+  vim.notify("Auto-save: " .. (vim.g.autosave and "on" or "off"))
+end, { desc = "Toggle auto-save" })
+map("n", "<leader>ud", function()
+  local on = vim.diagnostic.config().virtual_lines
+  vim.diagnostic.config({
+    virtual_lines = (not on) and { current_line = true } or false,
+    virtual_text = { prefix = "●", spacing = 2, current_line = on and nil or false },
+  })
+  vim.notify("Full diagnostics under the line: " .. (on and "off" or "on"))
+end, { desc = "Toggle full diagnostics under the line" })
+
 -- Git, JetBrains-style: one menu plus direct keys. See config/vcs.lua.
 local vcs = function(fn, ...)
   local args = { ... }
