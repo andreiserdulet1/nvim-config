@@ -154,7 +154,9 @@ return {
         -- `bdelete! %d`, which takes the split down with the buffer. The
         -- keyboard already did the right thing here and the mouse did not.
         close_command = function(n) require("snacks").bufdelete(n) end,
-        right_mouse_command = function(n) require("snacks").bufdelete(n) end,
+        -- Right-click is a menu (close, others, pin, copy path, GitHub, …);
+        -- middle-click still closes in one go.
+        right_mouse_command = function(n) require("config.menu").buffer(n) end,
         middle_mouse_command = function(n) require("snacks").bufdelete(n) end,
         -- No neo-tree offset: bufferline offsets only reserve space on the LEFT
         -- edge, and the tree now opens on the right. Leaving it in would indent

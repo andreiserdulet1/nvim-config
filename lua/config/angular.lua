@@ -23,8 +23,9 @@ local schematic_cache = {}
 -- Workspace
 ---------------------------------------------------------------------------
 
-local function workspace()
-  local dir = vim.fn.expand("%:p:h")
+---@param at string|nil a folder to work from instead of the current file's
+local function workspace(at)
+  local dir = at or vim.fn.expand("%:p:h")
   if dir == "" or vim.fn.isdirectory(dir) == 0 then dir = vim.uv.cwd() end
 
   local file = vim.fs.find("angular.json", { upward = true, path = dir, type = "file" })[1]
@@ -195,11 +196,13 @@ local function parse_files(out)
 end
 
 --- Generate one schematic. Prompts for the name, previews, then writes.
-function M.generate(schematic)
-  local ws, err = workspace()
+---@param at string|nil generate into this folder (the file tree's right-click)
+function M.generate(schematic, at)
+  local ws, err = workspace(at)
   if not ws then vim.notify(err, vim.log.levels.WARN) return end
 
-  local path = vim.api.nvim_buf_get_name(0)
+  -- path_prefix wants a file; any name inside the folder will do.
+  local path = at and (at .. "/_") or vim.api.nvim_buf_get_name(0)
 
   local function go(project)
     local prefix = path ~= "" and path_prefix(ws, project, path) or ""
@@ -255,8 +258,9 @@ function M.generate(schematic)
 end
 
 --- Pick any schematic this workspace offers, then generate it.
-function M.generate_pick()
-  local ws, err = workspace()
+---@param at string|nil generate into this folder instead of the current file's
+function M.generate_pick(at)
+  local ws, err = workspace(at)
   if not ws then vim.notify(err, vim.log.levels.WARN) return end
 
   local list = M.schematics(ws)
@@ -269,7 +273,7 @@ function M.generate_pick()
     prompt = "ng generate",
     format_item = function(s) return string.format("%-24s %s", s.name, s.desc) end,
   }, function(choice)
-    if choice then M.generate(choice.name) end
+    if choice then M.generate(choice.name, at) end
   end)
 end
 

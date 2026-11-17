@@ -29,7 +29,7 @@ local DIRECTION = { float = "float", bottom = "horizontal", right = "vertical" }
 
 --- Move the terminal shown in `win` to `pos` ("float" | "bottom" | "right" | "left").
 function M.move(win, pos)
-  win = win or vim.api.nvim_get_current_win()
+  if not win or win == 0 then win = vim.api.nvim_get_current_win() end
   local buf = vim.api.nvim_win_get_buf(win)
 
   if claude_buf(buf) then
@@ -131,6 +131,13 @@ function M.setup()
           local buf = vim.api.nvim_win_get_buf(win)
           if wants_bar(buf) and vim.wo[win].winbar == "" then
             vim.wo[win].winbar = M.winbar(buf)
+          end
+          if wants_bar(buf) and not vim.b[buf].config_term_menu then
+            vim.b[buf].config_term_menu = true
+            for _, mode in ipairs({ "n", "t" }) do
+              vim.keymap.set(mode, "<RightMouse>", function() require("config.menu").terminal() end,
+                { buffer = buf, desc = "Terminal menu" })
+            end
           end
         end
       end)

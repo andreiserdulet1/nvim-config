@@ -26,12 +26,12 @@ local function range()
   return l, l
 end
 
-local function root()
-  return vim.fs.root(0, ".git") or vim.uv.cwd()
+local function root(path)
+  return vim.fs.root(path or 0, ".git") or vim.uv.cwd()
 end
 
 local function rel(path)
-  local r = root()
+  local r = root(path)
   if path:sub(1, #r + 1) == r .. "/" then return path:sub(#r + 2) end
   return vim.fn.fnamemodify(path, ":~:.")
 end
@@ -62,33 +62,54 @@ function M.markdown(l1, l2)
   put(("`%s`\n```%s\n%s\n```"):format(ref, lang, code), "snippet")
 end
 
-local function git(args)
-  local res = vim.system(vim.list_extend({ "git" }, args), { cwd = root(), text = true }):wait()
+local function git(args, path)
+  local res = vim.system(vim.list_extend({ "git" }, args), { cwd = root(path), text = true }):wait()
   return res.code == 0 and vim.trim(res.stdout or "") or nil
 end
 
---- A GitHub link to these lines. A permalink to the commit when it is pushed;
---- otherwise the link would 404, so it points at the default branch and says so.
-function M.github(l1, l2)
-  if not l1 then l1, l2 = range() end
-  local file = rel(vim.api.nvim_buf_get_name(0))
-  local sha = git({ "rev-parse", "HEAD" })
-  local pushed = sha and git({ "branch", "-r", "--contains", sha }) or ""
-  local args = { "gh", "browse", file .. lines_suffix(l1, l2), "--no-browser" }
+--- The GitHub URL for a file or folder, optionally at lines. A permalink to the
+--- commit when it is pushed; otherwise that link would 404, so it points at the
+--- default branch and says so.
+---@return string|nil
+function M.github_url(path, l1, l2)
+  local r = root(path)
+  local target = rel(path)
+  if l1 then target = target .. lines_suffix(l1, l2) end
+  local sha = git({ "rev-parse", "HEAD" }, path)
+  local pushed = sha and git({ "branch", "-r", "--contains", sha }, path) or ""
+  local args = { "gh", "browse", target, "--no-browser" }
   if sha and pushed ~= "" then
     table.insert(args, "--commit=" .. sha)
   else
-    local base = (git({ "symbolic-ref", "--short", "refs/remotes/origin/HEAD" }) or "origin/main"):gsub("^origin/", "")
+    local base = (git({ "symbolic-ref", "--short", "refs/remotes/origin/HEAD" }, path) or "origin/main")
+      :gsub("^origin/", "")
     vim.list_extend(args, { "--branch", base })
     vim.notify("This commit isn't pushed — linking to " .. base .. " instead", vim.log.levels.WARN)
   end
-  local res = vim.system(args, { cwd = root(), text = true }):wait()
+  local res = vim.system(args, { cwd = r, text = true }):wait()
   if res.code ~= 0 then
     vim.notify("gh browse failed:\n" .. vim.trim(res.stderr or ""), vim.log.levels.ERROR)
-    return
+    return nil
   end
-  put(vim.trim(res.stdout), "GitHub link")
+  return vim.trim(res.stdout)
 end
+
+--- Copy a GitHub link to these lines.
+function M.github(l1, l2)
+  if not l1 then l1, l2 = range() end
+  local url = M.github_url(vim.api.nvim_buf_get_name(0), l1, l2)
+  if url then put(url, "GitHub link") end
+end
+
+--- Open these lines on GitHub.
+function M.open_github(l1, l2)
+  if not l1 then l1, l2 = range() end
+  local url = M.github_url(vim.api.nvim_buf_get_name(0), l1, l2)
+  if url then vim.ui.open(url) end
+end
+
+--- Copy a path relative to its repo.
+function M.copy_relative(path) put(rel(path), "path") end
 
 --- `import { Name } from '…'` for the symbol under the cursor (or the file's
 --- main export), relative to the file you were in before this one -- that is

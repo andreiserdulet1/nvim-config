@@ -27,6 +27,15 @@ local lsp_items = {
   [[PopUp.Find\ usages]],
 }
 
+-- Only offered on an Angular component's files.
+local component_items = {
+  [[PopUp.Go\ to\ template]],
+  [[PopUp.Go\ to\ styles]],
+  [[PopUp.Go\ to\ spec]],
+  [[PopUp.Go\ to\ class]],
+  [[PopUp.Test\ this\ component]],
+}
+
 -- Only offered when there is a diagnostic on the clicked line.
 local diag_items = {
   [[PopUp.Claude:\ fix\ this]],
@@ -87,9 +96,21 @@ function M.setup()
     vnoremenu 100.94 PopUp.Claude:\ explain    <Cmd>lua require("config.claude").explain()<CR>
     vnoremenu 100.95 PopUp.Send\ to\ Claude    <Cmd>ClaudeCodeSend<CR>
     anoremenu 100.96 PopUp.-run-               <Nop>
+    anoremenu 100.101 PopUp.Go\ to\ template   <Cmd>lua require("config.component").open("html")<CR>
+    anoremenu 100.102 PopUp.Go\ to\ styles     <Cmd>lua require("config.component").open("style")<CR>
+    anoremenu 100.103 PopUp.Go\ to\ spec       <Cmd>lua require("config.component").open("spec")<CR>
+    anoremenu 100.104 PopUp.Go\ to\ class      <Cmd>lua require("config.component").open("ts")<CR>
     anoremenu 100.97 PopUp.Test\ this\ component <Cmd>lua require("config.scripts").test_file()<CR>
     anoremenu 100.98 PopUp.Dev\ servers…       <Cmd>lua require("config.services").menu()<CR>
-    anoremenu 100.99 PopUp.All\ commands…      <Cmd>lua require("config.palette").open()<CR>
+    anoremenu 100.110 PopUp.-edit-              <Nop>
+    nnoremenu 100.111 PopUp.Toggle\ comment     <Cmd>normal gcc<CR>
+    vnoremenu 100.111 PopUp.Toggle\ comment     <Cmd>normal gc<CR>
+    vnoremenu 100.112 PopUp.Format\ selection   <Cmd>lua require("conform").format({ async = true, lsp_format = "fallback" })<CR>
+    vnoremenu 100.113 PopUp.Sort\ lines         :sort<CR>
+    anoremenu 100.114 PopUp.Undo\ history       <Cmd>UndotreeToggle<CR>
+    anoremenu 100.116 PopUp.Open\ on\ GitHub     <Cmd>lua require("config.copy").open_github()<CR>
+    vnoremenu 100.116 PopUp.Open\ on\ GitHub     <Cmd>lua require("config.copy").open_github()<CR>
+    anoremenu 100.120 PopUp.All\ commands…      <Cmd>lua require("config.palette").open()<CR>
   ]])
 
   vim.api.nvim_create_autocmd("MenuPopup", {
@@ -99,6 +120,7 @@ function M.setup()
       -- Nothing to rename or act on without a server attached.
       set_enabled(lsp_items, vim.lsp.get_clients({ bufnr = 0 })[1] ~= nil)
       set_enabled(diag_items, #vim.diagnostic.get(0, { lnum = vim.fn.line(".") - 1 }) > 0)
+      set_enabled(component_items, vim.api.nvim_buf_get_name(0):match("%.component%.[%w.]+$") ~= nil)
       -- gitsigns sets this when it attaches, which it only does inside a repo.
       set_enabled(git_items, vim.b.gitsigns_status_dict ~= nil)
     end,
@@ -148,16 +170,45 @@ function M.tree(state)
   entry("Copy to...", function() commands.copy(state) end)
   entry("Move to...", function() commands.move(state) end)
   entry("Delete", function() commands.delete(state) end)
+  local dir = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+  local is_ts = node.type ~= "directory" and node.path:match("%.ts$") ~= nil
+  if is_ts or (node.type ~= "directory" and node.path:match("%.html$")) then
+    entry("Test this component", function() require("config.scripts").test_file(node.path) end)
+  end
+  entry("Search in " .. (node.type == "directory" and "this folder" or "this file's folder"), function()
+    Snacks.picker.grep({ dirs = { dir } })
+  end)
+  entry("Terminal here", function()
+    require("toggleterm.terminal").Terminal
+      :new({ dir = dir, direction = "float", hidden = true, display_name = "shell @ " .. vim.fs.basename(dir) })
+      :toggle()
+  end)
+  if vim.fs.find("angular.json", { upward = true, path = dir, type = "file" })[1] then
+    entry("ng generate here…", function() require("config.angular").generate_pick(dir) end)
+  end
+  entry("Ask Claude about this", function()
+    local ref = "@" .. vim.fn.fnamemodify(node.path, ":.")
+    vim.ui.input({ prompt = "Ask Claude about " .. ref .. ": " }, function(q)
+      if q and vim.trim(q) ~= "" then require("config.claude").ask_with(ref .. " " .. q) end
+    end)
+  end)
   entry("Add to Claude's context", function()
     vim.cmd("ClaudeCodeAdd " .. vim.fn.fnameescape(node.path))
   end)
-  entry("Copy the path", function()
+  entry("Copy relative path", function() require("config.copy").copy_relative(node.path) end)
+  entry("Copy absolute path", function()
     vim.fn.setreg("+", node.path)
-    vim.notify(node.path)
+    vim.notify("Copied " .. node.path)
   end)
-  entry("Reveal in Finder", function()
-    vim.ui.open(node.type == "directory" and node.path or vim.fs.dirname(node.path))
+  entry("Copy GitHub link", function()
+    local url = require("config.copy").github_url(node.path)
+    if url then vim.fn.setreg("+", url) vim.notify("Copied " .. url) end
   end)
+  entry("Open on GitHub", function()
+    local url = require("config.copy").github_url(node.path)
+    if url then vim.ui.open(url) end
+  end)
+  entry("Reveal in Finder", function() vim.ui.open(dir) end)
   entry("Stage", function() commands.git_add_file(state) end)
   entry("Unstage", function() commands.git_unstage_file(state) end)
 
@@ -169,6 +220,82 @@ function M.tree(state)
       choice.run()
     end
   end)
+end
+
+--- A buffer tab's right-click menu (bufferline). Middle-click still closes.
+---@param bufnr integer
+function M.buffer(bufnr)
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  local name = path ~= "" and vim.fs.basename(path) or "[No Name]"
+  local items = {
+    { "Close", function() Snacks.bufdelete(bufnr) end },
+    { "Close all others", function()
+        vim.api.nvim_set_current_buf(bufnr)
+        Snacks.bufdelete.other()
+      end },
+    { "Close everything to the right", function() vim.cmd("BufferLineCloseRight") end },
+    { "Pin / unpin", function()
+        vim.api.nvim_set_current_buf(bufnr)
+        vim.cmd("BufferLineTogglePin")
+      end },
+    { "Open in a split", function() vim.cmd("vsplit | buffer " .. bufnr) end },
+  }
+  if path ~= "" then
+    vim.list_extend(items, {
+      { "Reveal in the file tree", function() vim.cmd("Neotree reveal_file=" .. vim.fn.fnameescape(path)) end },
+      { "Copy relative path", function() require("config.copy").copy_relative(path) end },
+      { "Copy GitHub link", function()
+          local url = require("config.copy").github_url(path)
+          if url then vim.fn.setreg("+", url) vim.notify("Copied " .. url) end
+        end },
+      { "Open on GitHub", function()
+          local url = require("config.copy").github_url(path)
+          if url then vim.ui.open(url) end
+        end },
+      { "Add to Claude's context", function() vim.cmd("ClaudeCodeAdd " .. vim.fn.fnameescape(path)) end },
+      { "File history", function() vim.cmd("DiffviewFileHistory " .. vim.fn.fnameescape(path)) end },
+    })
+  end
+  vim.ui.select(items, {
+    prompt = name,
+    format_item = function(i) return i[1] end,
+  }, function(i) if i then i[2]() end end)
+end
+
+--- A terminal's right-click menu. Terminals take the mouse away from the
+--- PopUp menu, so this is mapped on each terminal buffer (config/layout.lua).
+function M.terminal()
+  local buf = vim.api.nvim_get_current_buf()
+  local chan = vim.bo[buf].channel
+  local items = {
+    { "Paste", function()
+        local text = vim.fn.getreg("+")
+        if chan and chan > 0 and text ~= "" then
+          vim.fn.chansend(chan, "\27[200~" .. text .. "\27[201~")
+        end
+      end },
+    { "Copy the last 80 lines", function()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        while #lines > 0 and vim.trim(lines[#lines]) == "" do table.remove(lines) end
+        vim.fn.setreg("+", table.concat(vim.list_slice(lines, math.max(1, #lines - 79)), "\n"))
+        vim.notify("Copied the terminal's last lines")
+      end },
+    { "Send the last 80 lines to Claude", function()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        while #lines > 0 and vim.trim(lines[#lines]) == "" do table.remove(lines) end
+        require("config.claude").ask_with("This is terminal output. Explain what went wrong and fix it.\n```\n"
+          .. table.concat(vim.list_slice(lines, math.max(1, #lines - 79)), "\n") .. "\n```")
+      end },
+    { "Scroll / select (normal mode)", function() vim.cmd("stopinsert") end },
+    { "Move: float", function() require("config.layout").move(0, "float") end },
+    { "Move: bottom", function() require("config.layout").move(0, "bottom") end },
+    { "Move: right", function() require("config.layout").move(0, "right") end },
+    { "Hide", function() require("config.layout").hide(vim.api.nvim_get_current_win()) end },
+  }
+  vim.ui.select(items, {
+    prompt = "Terminal",
+    format_item = function(i) return i[1] end,
+  }, function(i) if i then i[2]() end end)
 end
 
 return M

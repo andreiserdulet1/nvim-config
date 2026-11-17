@@ -56,8 +56,9 @@ end
 --- Run a package.json script in a floating terminal at the project root.
 ---@param script string the script name, as written in package.json
 ---@param args string[]|nil extra arguments appended after the script
-function M.run(script, args)
-  local proj, err = M.project()
+---@param dir string|nil run in the project above this folder, not the current file's
+function M.run(script, args, dir)
+  local proj, err = M.project(dir)
   if not proj then
     vim.notify(err, vim.log.levels.WARN)
     return
@@ -136,9 +137,10 @@ local function test_script(scripts)
   return nil, false
 end
 
---- Run only the current component's spec.
-function M.test_file()
-  local proj, err = M.project()
+--- Run only the current component's spec (or that of `path`).
+---@param path string|nil a component file; defaults to the current buffer
+function M.test_file(path)
+  local proj, err = M.project(path and vim.fs.dirname(path) or nil)
   if not proj then
     vim.notify(err, vim.log.levels.WARN)
     return
@@ -151,9 +153,9 @@ function M.test_file()
   end
 
   -- From a template or stylesheet, test the component it belongs to.
-  local spec = require("config.component").sibling_path("spec")
+  local spec = require("config.component").sibling_path("spec", path)
   if not spec then
-    local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":t")
+    local name = vim.fn.fnamemodify(path or vim.api.nvim_buf_get_name(0), ":t")
     vim.notify("No spec file for " .. name, vim.log.levels.WARN)
     return
   end
@@ -164,7 +166,7 @@ function M.test_file()
   if needs_no_watch then table.insert(args, "--watch=false") end
 
   vim.notify("Testing " .. vim.fn.fnamemodify(spec, ":t"))
-  M.run(script, args)
+  M.run(script, args, proj.root)
 end
 
 --- Run the whole suite. Pass true to leave Karma watching.
