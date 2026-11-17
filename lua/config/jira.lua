@@ -752,8 +752,8 @@ end
 -- The picker
 ---------------------------------------------------------------------------
 
--- This is the one place in the config that builds a Telescope picker by hand
--- rather than going through vim.ui.select. The point of the Jira layer is
+-- This is the one place in the config that builds a picker by hand rather
+-- than going through vim.ui.select. The point of the Jira layer is
 -- acting on an issue without leaving the list, and per-entry mappings are the
 -- only way to get that.
 
@@ -788,9 +788,6 @@ local function menu(key)
     function(a) if a then a.f() end end)
 end
 
---- Show a list of issues, with the actions bound to control keys.
----@param title string
----@param issues table[]
 -- Details already fetched this session, keyed by issue key. Moving back up the
 -- list must not re-request, and a fetch that lands after you have moved on
 -- must not overwrite the pane you are now looking at.
@@ -837,90 +834,77 @@ local function detail_async(key, callback)
   )
 end
 
---- A preview pane showing the issue under the cursor.
-local function detail_previewer()
-  local previewers = require("telescope.previewers")
+--- Show a list of issues in snacks.picker, with a live detail preview and the
+--- actions on control keys. Double-click or <CR> opens the action menu.
+function M.pick(title, issues)
+  local items = {}
+  for i, issue in ipairs(issues) do
+    items[i] = {
+      idx = i,
+      issue = issue,
+      -- Searchable on key, status, assignee and summary together, so "1841",
+      -- "review" and "rounding" all find the same issue.
+      text = table.concat({ issue.key, issue.status, issue.assignee, issue.summary }, " "),
+    }
+  end
 
-  return previewers.new_buffer_previewer({
-    title = "Issue",
-    define_preview = function(self, entry)
-      local buf = self.state.bufnr
-      local issue = entry.value
+  -- Close the picker first: every action either prompts or opens a window, and
+  -- both fight with a picker that is still up.
+  local function act(fn)
+    return function(picker, item)
+      item = item or picker:current()
+      if not item then return end
+      picker:close()
+      vim.schedule(function() fn(item.issue.key) end)
+    end
+  end
 
+  Snacks.picker.pick({
+    title = title .. "   <CR> actions  ^t move  ^a assign  ^c comment  ^o browser",
+    items = items,
+    format = function(item) return { { entry(item.issue) } } end,
+    preview = function(ctx)
+      local issue = ctx.item.issue
       -- Something readable immediately, so the pane is never blank while the
       -- request is in flight.
-      vim.bo[buf].filetype = "markdown"
-      vim.api.nvim_buf_set_lines(buf, 0, -1, false, {
+      ctx.preview:reset()
+      ctx.preview:set_lines({
         "# " .. issue.key .. " · " .. issue.summary,
         "",
         "`" .. issue.status .. "`  `" .. issue.assignee .. "`",
         "",
         "_Loading…_",
       })
-
+      ctx.preview:highlight({ ft = "markdown" })
       detail_async(issue.key, function(lines)
         -- The cursor may have moved on while this was in flight; only paint if
-        -- this preview buffer is still showing the issue we asked about.
-        if not vim.api.nvim_buf_is_valid(buf) then return end
-        local current = self.state and self.state.bufnr
-        if current ~= buf then return end
-        pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, lines)
+        -- the picker is still showing the issue we asked about.
+        local current = ctx.picker and not ctx.picker.closed and ctx.picker:current()
+        if not current or current.issue.key ~= issue.key then return end
+        ctx.preview:set_lines(lines)
+        ctx.preview:highlight({ ft = "markdown" })
       end)
     end,
+    confirm = act(menu),
+    actions = {
+      jira_move = act(M.move),
+      jira_assign = act(M.assign),
+      jira_comment = act(M.comment),
+      jira_open = act(M.open),
+      jira_view = act(M.view),
+    },
+    win = {
+      input = {
+        keys = {
+          ["<C-t>"] = { "jira_move", mode = { "i", "n" } },
+          ["<C-a>"] = { "jira_assign", mode = { "i", "n" } },
+          ["<C-c>"] = { "jira_comment", mode = { "i", "n" } },
+          ["<C-o>"] = { "jira_open", mode = { "i", "n" } },
+          ["<C-v>"] = { "jira_view", mode = { "i", "n" } },
+        },
+      },
+    },
   })
-end
-
-function M.pick(title, issues)
-  local pickers = require("telescope.pickers")
-  local finders = require("telescope.finders")
-  local conf = require("telescope.config").values
-  local actions = require("telescope.actions")
-  local state = require("telescope.actions.state")
-
-  local function selected()
-    local sel = state.get_selected_entry()
-    return sel and sel.value or nil
-  end
-
-  -- Close the picker first: every action either prompts or opens a window, and
-  -- both fight with a picker that is still up.
-  local function act(fn)
-    return function(bufnr)
-      local issue = selected()
-      if not issue then return end
-      actions.close(bufnr)
-      vim.schedule(function() fn(issue.key) end)
-    end
-  end
-
-  pickers.new({}, {
-    prompt_title = title .. "   <CR> actions  ^t move  ^a assign  ^c comment  ^o browser",
-    finder = finders.new_table({
-      results = issues,
-      entry_maker = function(issue)
-        return {
-          value = issue,
-          display = entry(issue),
-          -- Searchable on key, status, assignee and summary together, so
-          -- "1841", "review" and "rounding" all find the same issue.
-          ordinal = table.concat({ issue.key, issue.status, issue.assignee, issue.summary }, " "),
-        }
-      end,
-    }),
-    sorter = conf.generic_sorter({}),
-    previewer = detail_previewer(),
-    attach_mappings = function(_, map)
-      actions.select_default:replace(act(menu))
-      for _, mode in ipairs({ "i", "n" }) do
-        map(mode, "<C-t>", act(M.move))
-        map(mode, "<C-a>", act(M.assign))
-        map(mode, "<C-c>", act(M.comment))
-        map(mode, "<C-o>", act(M.open))
-        map(mode, "<C-v>", act(M.view))
-      end
-      return true
-    end,
-  }):find()
 end
 
 -- Fetch, complain usefully if that fails, then show.

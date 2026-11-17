@@ -3,70 +3,38 @@ local icons = require("config.icons")
 
 return {
 
-  -- Telescope: the fuzzy finder every <leader>f key routes through ----------
-  -- vim.ui.select is NOT its job any more -- snacks.picker's ui_select handles
-  -- that (see plugins/ui.lua), which retired telescope-ui-select, dormant
-  -- upstream since December 2023.
+  -- Finding: snacks.picker behind every <leader>f key ----------------------
+  -- One picker for everything, so vim.ui.select (scripts, actions, jira,
+  -- projects) looks and behaves exactly like file search. snacks itself is set
+  -- up in plugins/ui.lua; lazy.nvim merges this spec's keys and opts into it.
   {
-    "nvim-telescope/telescope.nvim",
-    cmd = "Telescope",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
-    },
+    "folke/snacks.nvim",
     keys = {
-      { "<leader><space>", "<cmd>Telescope find_files<cr>", desc = "Find file" },
-      { "<leader>fg", "<cmd>Telescope live_grep<cr>", desc = "Grep project" },
-      { "<leader>fw", "<cmd>Telescope grep_string<cr>", desc = "Grep word under cursor" },
-      { "<leader>fb", "<cmd>Telescope buffers sort_mru=true<cr>", desc = "Buffers" },
-      { "<leader>fr", "<cmd>Telescope oldfiles<cr>", desc = "Recent files" },
-      { "<leader>fs", "<cmd>Telescope lsp_document_symbols<cr>", desc = "Symbols (file)" },
-      { "<leader>fS", "<cmd>Telescope lsp_dynamic_workspace_symbols<cr>", desc = "Symbols (project)" },
-      { "<leader>fh", "<cmd>Telescope help_tags<cr>", desc = "Help" },
-      { "<leader>fk", "<cmd>Telescope keymaps<cr>", desc = "Keymaps" },
-      { "<leader>fd", "<cmd>Telescope diagnostics<cr>", desc = "Diagnostics" },
-      { "<leader>fc", "<cmd>Telescope resume<cr>", desc = "Resume last search" },
+      { "<leader><space>", function() Snacks.picker.files() end, desc = "Find file" },
+      { "<leader>fg", function() Snacks.picker.grep() end, desc = "Grep project" },
+      { "<leader>fw", function() Snacks.picker.grep_word() end, desc = "Grep word / selection", mode = { "n", "x" } },
+      { "<leader>fb", function() Snacks.picker.buffers() end, desc = "Buffers" },
+      { "<leader>fr", function() Snacks.picker.recent({ filter = { cwd = true } }) end, desc = "Recent files (project)" },
+      { "<leader>fs", function() Snacks.picker.lsp_symbols() end, desc = "Symbols (file)" },
+      { "<leader>fS", function() Snacks.picker.lsp_workspace_symbols() end, desc = "Symbols (project)" },
+      { "<leader>fh", function() Snacks.picker.help() end, desc = "Help" },
+      { "<leader>fk", function() Snacks.picker.keymaps() end, desc = "Keymaps" },
+      { "<leader>fd", function() Snacks.picker.diagnostics() end, desc = "Diagnostics" },
+      { "<leader>fc", function() Snacks.picker.resume() end, desc = "Resume last search" },
       { "<leader>fp", function() require("config.projects").pick() end, desc = "Switch project" },
-      { "<leader>gc", "<cmd>Telescope git_commits<cr>", desc = "Git commits" },
+      { "<leader>gc", function() Snacks.picker.git_log() end, desc = "Git commits" },
     },
-    opts = function()
-      local actions = require("telescope.actions")
-      return {
-        defaults = {
-          prompt_prefix = "   ",
-          selection_caret = " ",
-          path_display = { "truncate" },
-          sorting_strategy = "ascending",
-          layout_config = {
-            horizontal = { prompt_position = "top", preview_width = 0.55 },
-            width = 0.9,
-            height = 0.85,
-          },
-          -- Never search build output or dependencies.
-          file_ignore_patterns = {
-            "node_modules", "%.git/", "dist/", "%.angular/", "coverage/",
-            "%.terraform/", "target/", "%.lock", "yarn%.lock", "package%-lock%.json",
-          },
-          mappings = {
-            i = {
-              ["<C-j>"] = actions.move_selection_next,
-              ["<C-k>"] = actions.move_selection_previous,
-              ["<C-q>"] = actions.smart_send_to_qflist + actions.open_qflist,
-              ["<Esc>"] = actions.close,   -- one Esc closes, no normal mode detour
-            },
-          },
+    opts = {
+      picker = {
+        layout = { preset = "default" },
+        sources = {
+          -- Dotfiles matter here (.env, .github/, .eslintrc); build output and
+          -- dependencies never do. <C-q> in any picker sends to quickfix.
+          files = { hidden = true, exclude = { "dist", ".angular", "coverage", ".terraform", "target" } },
+          grep = { hidden = true, exclude = { "dist", ".angular", "coverage", ".terraform", "*.lock", "package-lock.json" } },
         },
-        pickers = {
-          find_files = { hidden = true },
-          buffers = { mappings = { i = { ["<C-d>"] = actions.delete_buffer } } },
-        },
-      }
-    end,
-    config = function(_, opts)
-      local telescope = require("telescope")
-      telescope.setup(opts)
-      pcall(telescope.load_extension, "fzf")
-    end,
+      },
+    },
   },
 
   -- File tree ---------------------------------------------------------------
@@ -155,9 +123,8 @@ return {
         { "<leader>c", group = "code" },
         { "<leader>g", group = "git" },
         { "<leader>o", group = "component" },
-        { "<leader>n", group = "run / test" },
+        { "<leader>n", group = "run / test / dev servers" },
         { "<leader>ng", group = "angular cli" },
-        { "<leader>d", group = "debug" },
         { "<leader>gh", group = "hunk" },
         { "<leader>a", group = "ai (claude)" },
         { "<leader>t", group = "terminal" },
@@ -165,7 +132,7 @@ return {
         { "<leader>u", group = "toggle" },
         { "<leader>m", group = "multi-cursor" },
         { "<leader>s", group = "search / replace" },
-        { "<leader>p", group = "pull requests" },
+        { "<leader>p", group = "pull request" },
         { "<leader>j", group = "jira" },
         { "<leader>A", group = "github actions" },
         { "<leader>q", group = "session / quit" },
@@ -209,7 +176,7 @@ return {
     opts = { signs = false },
     keys = {
       { "<leader>xt", "<cmd>Trouble todo toggle<cr>", desc = "TODO list" },
-      { "<leader>ft", "<cmd>TodoTelescope<cr>", desc = "Find TODOs" },
+      { "<leader>ft", function() Snacks.picker.todo_comments() end, desc = "Find TODOs" },
     },
   },
 

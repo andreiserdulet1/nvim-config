@@ -56,7 +56,6 @@ link() {
 
 echo "Linking terminal configs from ${REPO/#$HOME/~}"
 link tmux.conf     "$HOME/.tmux.conf"
-link dev           "$HOME/.local/bin/dev"
 link starship.toml "$HOME/.config/starship.toml"
 link git-ignore    "$HOME/.config/git/ignore"
 link lazygit.yml   "$HOME/Library/Application Support/lazygit/config.yml"
@@ -78,11 +77,10 @@ check_zshrc 'zoxide init'    'zoxide'
 check_zshrc 'fzf'            'fzf key bindings'
 check_zshrc 'direnv hook'    'direnv hook'
 check_zshrc 'EDITOR'         'EDITOR=nvim'
-check_zshrc 'local/bin'      '~/.local/bin on PATH (needed for `dev`)'
 
 echo
 if [[ "$failed" -eq 0 ]]; then
-  echo "Done. Open a new shell, then try: dev"
+  echo "Done. Open a new shell, then start nvim."
 else
   echo "Finished with warnings above." >&2
   exit 1

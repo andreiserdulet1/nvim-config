@@ -80,41 +80,10 @@ return {
         map("n", "<leader>ghp", gs.preview_hunk_inline, "Preview hunk")
         map("n", "<leader>gb", function() gs.blame_line({ full = true }) end, "Blame line")
         map("n", "<leader>gB", function() gs.blame() end, "Blame file")
-        -- <leader>ug, not <leader>ub: buffer-local maps beat global ones, and
-        -- <leader>ub is the background-painting picker in config/keymaps.lua.
-        -- Mapping it here shadowed that picker in every file in a git repo.
         map("n", "<leader>ug", gs.toggle_current_line_blame, "Toggle inline blame")
         -- ih is a text object: `dih` deletes the hunk under the cursor.
         map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
       end,
-    },
-  },
-
-  -- GitHub pull requests, in the editor --------------------------------------
-  -- Drives the `gh` CLI you're already authenticated with, so reviewing a
-  -- teammate's branch doesn't mean a browser round-trip. commissions-ui is at
-  -- PR #152 and aws-infrastructure-billing at #410, so this gets real use.
-  {
-    "pwntester/octo.nvim",
-    cmd = "Octo",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope.nvim",
-      "nvim-tree/nvim-web-devicons",
-    },
-    opts = {
-      picker = "telescope",
-      use_local_fs = false,
-      enable_builtin = true,
-      suppress_missing_scope = { projects_v2 = true },
-    },
-    keys = {
-      { "<leader>pl", "<cmd>Octo pr list<cr>", desc = "PRs in this repo" },
-      { "<leader>pp", "<cmd>Octo pr<cr>", desc = "PR for this branch" },
-      { "<leader>pr", "<cmd>Octo review start<cr>", desc = "Start a review" },
-      { "<leader>pR", "<cmd>Octo review submit<cr>", desc = "Submit the review" },
-      { "<leader>pi", "<cmd>Octo issue list<cr>", desc = "Issues" },
-      { "<leader>ps", "<cmd>Octo search<cr>", desc = "Search PRs and issues" },
     },
   },
 
@@ -124,7 +93,18 @@ return {
     cmd = { "DiffviewOpen", "DiffviewFileHistory", "DiffviewClose" },
     keys = {
       { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Diffview (working tree)" },
-      { "<leader>gm", "<cmd>DiffviewOpen origin/master...HEAD<cr>", desc = "Diff vs master" },
+      {
+        "<leader>gm",
+        function()
+          -- Repos here are split between main and master; ask git rather than
+          -- guess. origin/HEAD is set by clone; fall back to main.
+          local res = vim.system({ "git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD" },
+            { text = true }):wait()
+          local base = res.code == 0 and vim.trim(res.stdout) or "origin/main"
+          vim.cmd("DiffviewOpen " .. base .. "...HEAD")
+        end,
+        desc = "Diff vs default branch",
+      },
       { "<leader>gH", "<cmd>DiffviewFileHistory %<cr>", desc = "File history (diffview)" },
       { "<leader>gq", "<cmd>DiffviewClose<cr>", desc = "Close diffview" },
       {

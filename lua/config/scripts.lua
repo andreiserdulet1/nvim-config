@@ -1,11 +1,10 @@
 -- Running this project's scripts: the picker, plus dedicated test keys.
 --
 -- Everything goes through M.run, which always invokes the *named script* via
--- yarn rather than a reconstructed command. That is what makes
--- advertiser-payments-ui work: its test script is
---   node scripts/load-env.mjs development && ng test
--- and yarn 1.x appends our extra arguments after it, so the env prelude still
--- happens. Rebuilding the command ourselves would silently skip it.
+-- yarn rather than a reconstructed command. Some repos wrap their scripts in an
+-- env prelude (`node scripts/load-env.mjs dev && ng serve ...`), and yarn 1.x
+-- appends our extra arguments after the whole script, so the prelude still
+-- runs. Rebuilding the command ourselves would silently skip it.
 
 local M = {}
 
@@ -21,9 +20,21 @@ local function nearest_package_json()
   return vim.fs.find("package.json", { upward = true, path = dir, type = "file" })[1]
 end
 
--- Returns the decoded package.json and its directory, or nil plus a reason.
-local function project()
-  local pkg = nearest_package_json()
+--- The nearest package.json above the current file (or cwd), decoded.
+--- Returns { root, scripts, name }, or nil plus a reason.
+---@param dir string|nil  start the search here instead of the current file
+function M.project(dir)
+  local pkg
+  if dir then
+    pkg = vim.fs.find("package.json", { upward = true, path = dir, type = "file" })[1]
+  else
+    pkg = nearest_package_json()
+  end
+  return M.decode(pkg)
+end
+
+---@param pkg string|nil path to a package.json
+function M.decode(pkg)
   if not pkg then return nil, "No package.json above this file" end
 
   local read_ok, content = pcall(vim.fn.readfile, pkg)
@@ -46,7 +57,7 @@ end
 ---@param script string the script name, as written in package.json
 ---@param args string[]|nil extra arguments appended after the script
 function M.run(script, args)
-  local proj, err = project()
+  local proj, err = M.project()
   if not proj then
     vim.notify(err, vim.log.levels.WARN)
     return
@@ -91,7 +102,7 @@ end
 
 --- Pick any script from this project's package.json and run it.
 function M.pick()
-  local proj, err = project()
+  local proj, err = M.project()
   if not proj then
     vim.notify(err, vim.log.levels.WARN)
     return
@@ -127,7 +138,7 @@ end
 
 --- Run only the current component's spec.
 function M.test_file()
-  local proj, err = project()
+  local proj, err = M.project()
   if not proj then
     vim.notify(err, vim.log.levels.WARN)
     return
@@ -158,7 +169,7 @@ end
 
 --- Run the whole suite. Pass true to leave Karma watching.
 function M.test_all(watch)
-  local proj, err = project()
+  local proj, err = M.project()
   if not proj then
     vim.notify(err, vim.log.levels.WARN)
     return

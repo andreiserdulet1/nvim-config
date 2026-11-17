@@ -11,8 +11,8 @@ local health = vim.health
 
 -- Tools installed by the Brewfile and expected on $PATH.
 local PATH_TOOLS = {
-  { cmd = "rg",          why = "Telescope live grep, and grug-far search & replace", fix = "brew install ripgrep",         required = true },
-  { cmd = "fd",          why = "Telescope file finding",                             fix = "brew install fd",              required = true },
+  { cmd = "rg",          why = "project grep (<leader>fg), and grug-far search & replace", fix = "brew install ripgrep",         required = true },
+  { cmd = "fd",          why = "file finding (<leader><space>)",                             fix = "brew install fd",              required = true },
   { cmd = "delta",       why = "side-by-side diffs inside lazygit",                   fix = "brew install git-delta",       required = true },
   { cmd = "tree-sitter", why = "compiling treesitter parsers (the main branch needs it)", fix = "brew install tree-sitter-cli", required = true },
   { cmd = "lazygit",     why = "<leader>gg, the main git interface",                  fix = "brew install lazygit",         required = true },
@@ -33,7 +33,6 @@ local MASON_TOOLS = {
   { cmd = "vscode-eslint-language-server", why = "ESLint diagnostics as you type" },
   { cmd = "terraform-ls",                  why = "Terraform completion and hover" },
   { cmd = "tflint",                        why = "Terraform linting" },
-  { cmd = "js-debug-adapter",              why = "debugging Angular in Chrome (<leader>d)" },
   { cmd = "shfmt",                         why = "shell script formatting" },
 }
 
@@ -246,73 +245,6 @@ function M.check()
               "Check the token is still valid, and that the configured board has an active sprint." })
         end
       end
-    end
-  end
-
-  ---------------------------------------------------------------------------
-  health.start("Background paintings")
-  ---------------------------------------------------------------------------
-  -- This one has four independent parts and fails silently when any is missing,
-  -- which is the worst possible combination -- you get a plain editor and no
-  -- clue which link in the chain broke. So report on each separately.
-  local painting = require("config.painting")
-
-  -- Test the terminal directly rather than asking painting.supported(), which
-  -- also requires an attached UI -- otherwise a headless :checkhealth reports
-  -- "you need iTerm2" at someone who is already running iTerm2.
-  if vim.env.TERM_PROGRAM == "iTerm.app" then
-    health.ok("iTerm2 — it can draw a background image behind the editor")
-  else
-    health.info("Backgrounds need iTerm2; nothing is emitted in "
-      .. (vim.env.TERM_PROGRAM or "this terminal")
-      .. ". Everything else works exactly as normal.")
-  end
-
-  -- Renders are per theme: a painting mapped into one theme's band and shown
-  -- behind another sits in a visible rectangle and loses its contrast
-  -- guarantee. So this counts what exists FOR THE ACTIVE THEME, and a theme
-  -- added without re-running import.sh reports as unrendered rather than
-  -- borrowing another theme's files.
-  local scheme = vim.g.colors_name or "graphite"
-  local slugs = painting.slugs()
-  if #slugs > 0 then
-    health.ok(("%d paintings rendered for %s"):format(#slugs, scheme))
-  else
-    health.warn("No paintings rendered for " .. scheme,
-      { "Run ~/.config/nvim/terminal/paintings/import.sh",
-        "Or just this theme: import.sh --theme " .. scheme,
-        "Until then the theme stays opaque, which is a working editor." })
-  end
-
-  local choice = painting.choice()
-  if choice == painting.NONE then
-    health.info("Set to 'No background' — the theme is solid. <Space>ub to change it.")
-  elseif choice == painting.RANDOM then
-    health.ok("Set to a random painting each launch")
-  elseif vim.tbl_contains(slugs, choice) then
-    health.ok("Set to " .. choice)
-  else
-    health.warn(("Set to '%s', which is not rendered"):format(choice),
-      { "Pick another with <Space>ub, or re-run import.sh." })
-  end
-
-  if vim.fn.executable("magick") == 1 then
-    health.ok("magick — import.sh can render the paintings")
-  else
-    health.info("ImageMagick is missing. It is only needed to re-render the "
-      .. "paintings, so an already-rendered set keeps working: brew install imagemagick")
-  end
-
-  -- tmux drops the escape sequence unless passthrough is on, which shows up as
-  -- "works in a plain shell, does nothing under `dev`".
-  if vim.env.TMUX and vim.fn.executable("tmux") == 1 then
-    local passthrough = vim.trim(vim.fn.system({ "tmux", "show", "-gv", "allow-passthrough" }))
-    if passthrough == "on" then
-      health.ok("tmux allow-passthrough on — the escape sequence reaches iTerm2")
-    else
-      health.warn("tmux allow-passthrough is " .. (passthrough == "" and "unset" or passthrough),
-        { "terminal/tmux.conf sets it; this session predates that.",
-          "Fix with: tmux source-file ~/.tmux.conf" })
     end
   end
 end

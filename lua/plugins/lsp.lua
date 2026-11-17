@@ -27,8 +27,6 @@ return {
         "dockerfile-language-server",
         "bash-language-server",
         "shfmt",
-        -- Debugging (see plugins/debug.lua)
-        "js-debug-adapter",
         -- Editing this config
         "lua-language-server",
         "stylua",
@@ -241,10 +239,10 @@ return {
             vim.keymap.set(mode or "n", keys, fn, { buffer = ev.buf, desc = "LSP: " .. desc })
           end
 
-          map("gd", "<cmd>Telescope lsp_definitions<cr>", "Go to definition")
-          map("gr", "<cmd>Telescope lsp_references<cr>", "References")
-          map("gi", "<cmd>Telescope lsp_implementations<cr>", "Implementation")
-          map("gy", "<cmd>Telescope lsp_type_definitions<cr>", "Type definition")
+          map("gd", function() Snacks.picker.lsp_definitions() end, "Go to definition")
+          map("gr", function() Snacks.picker.lsp_references() end, "References")
+          map("gi", function() Snacks.picker.lsp_implementations() end, "Implementation")
+          map("gy", function() Snacks.picker.lsp_type_definitions() end, "Type definition")
           map("gD", vim.lsp.buf.declaration, "Declaration")
           map("K", function() vim.lsp.buf.hover({ border = "rounded" }) end, "Hover docs")
           map("<leader>ca", vim.lsp.buf.code_action, "Code action", { "n", "v" })

@@ -235,18 +235,15 @@ function M.highlights(p)
     ----------------------------------------------------------------------
     -- Plugins that do not link sensibly to the base groups
     ----------------------------------------------------------------------
-    -- Telescope: card on ground, matching the guide's layering
-    TelescopeNormal       = { fg = p.text, bg = p.surface },
-    TelescopeBorder       = { fg = p.border, bg = p.surface },
-    TelescopeTitle        = { fg = p.ground, bg = p.amber, bold = true },
-    TelescopePromptNormal = { fg = p.text, bg = p.raised },
-    TelescopePromptBorder = { fg = p.raised, bg = p.raised },
-    TelescopePromptTitle  = { fg = p.ground, bg = p.amber, bold = true },
-    TelescopePromptPrefix = { fg = p.amber },
-    TelescopeResultsTitle = { fg = p.surface, bg = p.surface },
-    TelescopePreviewTitle = { fg = p.ground, bg = p.sage, bold = true },
-    TelescopeSelection    = { bg = p.selection, bold = true },
-    TelescopeMatching     = { fg = p.amber, bold = true },
+    -- snacks.picker: card on ground, matching the guide's layering
+    SnacksPicker          = { fg = p.text, bg = p.surface },
+    SnacksPickerBorder    = { fg = p.border, bg = p.surface },
+    SnacksPickerTitle     = { fg = p.ground, bg = p.amber, bold = true },
+    SnacksPickerInput     = { fg = p.text, bg = p.raised },
+    SnacksPickerInputBorder = { fg = p.raised, bg = p.raised },
+    SnacksPickerPrompt    = { fg = p.amber },
+    SnacksPickerListCursorLine = { bg = p.selection, bold = true },
+    SnacksPickerMatch     = { fg = p.amber, bold = true },
 
     -- neo-tree
     NeoTreeNormal        = { fg = p.text, bg = p.surface },
@@ -348,25 +345,6 @@ function M.highlights(p)
     CsvViewCol7 = { fg = p.comment },
     CsvViewCol8 = { fg = p.text },
 
-    -- nvim-dap-ui
-    DapUINormal          = { fg = p.text, bg = p.surface },
-    DapUIVariable        = { fg = p.text },
-    DapUIValue           = { fg = p.sage },
-    DapUIType            = { fg = p.ochre },
-    DapUIScope           = { fg = p.amber, bold = true },
-    DapUIDecoration      = { fg = p.border },
-    DapUIThread          = { fg = p.sage },
-    DapUIStoppedThread   = { fg = p.amber },
-    DapUIBreakpointsPath = { fg = p.slate },
-    DapUIBreakpointsInfo = { fg = p.sage },
-    DapUIBreakpointsCurrentLine = { fg = p.amber, bold = true },
-    DapUILineNumber      = { fg = p.gutter },
-    DapUIWatchesEmpty    = { fg = p.gutter },
-    DapUIWatchesValue    = { fg = p.sage },
-    DapUIWatchesError    = { fg = p.rose },
-    DapUISource          = { fg = p.amber },
-    DapUIFloatBorder     = { fg = p.border, bg = p.surface },
-    DapStoppedLine       = { bg = p.change_bg },
 
     -- render-markdown
     RenderMarkdownH1Bg   = { fg = p.amber, bg = p.raised, bold = true },
@@ -409,45 +387,16 @@ function M.highlights(p)
     SnacksNotifierError   = { fg = p.rose, bg = p.surface },
     SnacksNotifierBorderInfo = { fg = p.border, bg = p.surface },
 
-    -- undotree, grug-far, octo
+    -- undotree, grug-far
     UndotreeCurrent = { fg = p.amber, bold = true },
     UndotreeNode    = { fg = p.slate },
     UndotreeSeq     = { fg = p.gutter },
     GrugFarHelpHeader = { fg = p.amber, bold = true },
     GrugFarResultsMatch = { fg = p.amber, bold = true },
     GrugFarResultsPath  = { fg = p.slate, underline = true },
-    OctoGreen = { fg = p.sage },
-    OctoRed   = { fg = p.rose },
-    OctoPurple = { fg = p.slate },
-    OctoYellow = { fg = p.ochre },
 
     -- the cheatsheet buffer uses Title/Statement/Comment, already covered
   }
-
-  ------------------------------------------------------------------------
-  -- Transparency
-  ------------------------------------------------------------------------
-  -- Set by init.lua when a background painting is available, so the terminal
-  -- shows through the editing canvas. Four groups is the whole change:
-  -- SignColumn, FoldColumn and Winbar are already NONE above and inherit from
-  -- Normal, so they come along for free.
-  --
-  -- What stays opaque is the deliberate half. Floats, popups, the completion
-  -- menu, the statusline and the Telescope surfaces are where you most need
-  -- text to be unambiguous, and a solid `surface` behind them costs nothing
-  -- visually. CursorLine keeps its fill too, which gives a clean band under the
-  -- line being edited.
-  if vim.g.scheme_transparent then
-    groups.Normal.bg = none
-    groups.NormalNC.bg = none
-    groups.TabLineFill.bg = none
-
-    -- EndOfBuffer hides the `~` markers by painting them the background colour.
-    -- That trick needs a background to match, and there isn't one any more, so
-    -- they become a faint gutter mark instead of ground-coloured text sitting
-    -- visibly on top of a painting.
-    groups.EndOfBuffer = { fg = p.gutter, bg = none }
-  end
 
   return groups
 end
@@ -461,15 +410,6 @@ function M.load(name)
     return
   end
   local palette = palettes.get()
-
-  -- A background painting lifts the ground colour, which costs comments most of
-  -- their contrast margin. Swapping the palette entry rather than the handful
-  -- of highlight groups means every group that reads `comment` -- Comment,
-  -- @comment, NeoTreeGitUntracked, the dashboard footer and a dozen others --
-  -- follows automatically and cannot drift apart.
-  if vim.g.scheme_transparent then
-    palette = vim.tbl_extend("force", palette, { comment = palette.comment_on_painting })
-  end
 
   if vim.g.colors_name then vim.cmd("hi clear") end
   if vim.fn.exists("syntax_on") == 1 then vim.cmd("syntax reset") end

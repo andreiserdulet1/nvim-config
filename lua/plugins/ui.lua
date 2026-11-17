@@ -42,6 +42,37 @@ return {
           { "filename", path = 1 },  -- relative path, so you know which module
         },
         lualine_x = {
+          -- Buttons. Everything here is clickable: left click does the obvious
+          -- thing, right click opens the options. Same actions as the keys
+          -- shown in the palette (☰ / <C-p>).
+          {
+            function() return require("config.services").status() end,
+            color = function()
+              local hl = require("config.services").status_hl()
+              return hl and { fg = Snacks.util.color(hl) } or nil
+            end,
+            on_click = function(_, button)
+              local services = require("config.services")
+              if button == "r" and next(services.running) then services.stop() else services.menu() end
+            end,
+          },
+          {
+            function() return require("config.claude").status() end,
+            color = function()
+              return require("config.claude").is_running() and { fg = Snacks.util.color("Function") } or nil
+            end,
+            on_click = function(_, button)
+              if button == "r" then require("config.claude").layout_menu() else require("config.claude").toggle() end
+            end,
+          },
+          {
+            function() return require("config.actions").ci_status() end,
+            on_click = function() require("config.actions").list() end,
+          },
+          {
+            function() return "☰" end,
+            on_click = function() require("config.palette").open() end,
+          },
           -- Show which LSP servers are attached to this buffer.
           {
             function()
@@ -231,22 +262,23 @@ return {
       indent = { enabled = true, scope = { enabled = false } },
       words = { enabled = true },        -- highlight the symbol under the cursor, ]] / [[ to walk its references
       input = { enabled = true },
-      -- ui_select only -- this does NOT replace Telescope, which still owns
-      -- every <leader>f key. It exists so vim.ui.select (config/actions.lua,
-      -- scripts.lua, angular.lua, projects.lua, jira.lua) stops depending on
-      -- telescope-ui-select, unmaintained since December 2023.
+      -- The one picker: every <leader>f key (plugins/editor.lua), and every
+      -- vim.ui.select in config/ (scripts, services, actions, jira, projects).
       picker = { enabled = true, ui_select = true },
       dashboard = {
         enabled = true,
         preset = {
           keys = {
-            { icon = icons.dashboard.find, key = "f", desc = "Find File", action = ":Telescope find_files" },
-            { icon = icons.dashboard.new, key = "n", desc = "New File", action = ":ene | startinsert" },
-            { icon = icons.dashboard.grep, key = "g", desc = "Grep Text", action = ":Telescope live_grep" },
-            { icon = icons.dashboard.recent, key = "r", desc = "Recent Files", action = ":Telescope oldfiles" },
+            { icon = "▶ ", key = "s", desc = "Start this project", action = ":lua require('config.services').start()" },
+            { icon = "▶ ", key = "S", desc = "Start inside shell-ui", action = ":lua require('config.services').start_with_shell()" },
+            { icon = "✦ ", key = "c", desc = "Continue Claude conversation", action = ":lua require('config.claude').continue()" },
+            { icon = icons.dashboard.find, key = "f", desc = "Find File", action = ":lua Snacks.picker.files()" },
+            { icon = icons.dashboard.grep, key = "g", desc = "Grep Text", action = ":lua Snacks.picker.grep()" },
+            { icon = icons.dashboard.recent, key = "r", desc = "Recent Files", action = ":lua Snacks.picker.recent({ filter = { cwd = true } })" },
             { icon = icons.dashboard.projects, key = "p", desc = "Projects", action = ":lua require('config.projects').pick()" },
-            { icon = icons.dashboard.cheatsheet, key = "?", desc = "Cheatsheet", action = ":lua require('config.cheatsheet').open()" },
+            { icon = "☰ ", key = "k", desc = "All commands", action = ":lua require('config.palette').open()" },
             { icon = icons.dashboard.jira, key = "j", desc = "Jira sprint", action = ":lua require('config.jira').sprint()" },
+            { icon = icons.dashboard.cheatsheet, key = "?", desc = "Cheatsheet", action = ":lua require('config.cheatsheet').open()" },
             { icon = icons.dashboard.plugins, key = "l", desc = "Plugins", action = ":Lazy" },
             { icon = icons.dashboard.quit, key = "q", desc = "Quit", action = ":qa" },
           },

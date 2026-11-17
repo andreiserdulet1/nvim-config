@@ -1,7 +1,10 @@
 # Neovim IDE — Angular / TypeScript + Terraform
 
-A hand-rolled Neovim config, ~30 plugins, built for two jobs: Angular front-ends
-and AWS infrastructure. Everything here is readable in about twenty minutes.
+A hand-rolled Neovim config, ~30 plugins, built for front-end work on Angular
+repos (with Terraform on the side). It works the same in every repo under
+`~/projects`: start the app and its wiremock in one key, or run it inside
+shell-ui on any branch; drive Claude from the code you're looking at; and do
+most of it with the mouse if you prefer.
 
 Start it with `v` (the alias already in your `~/.zshrc`) or `nvim`.
 Press `<Space>?` inside Neovim at any time for the keymap cheatsheet.
@@ -16,7 +19,6 @@ Press `<Space>?` inside Neovim at any time for the keymap cheatsheet.
 git clone git@github.com:andreiserdulet1/nvim-config.git ~/.config/nvim
 brew bundle --file=~/.config/nvim/Brewfile
 ~/.config/nvim/terminal/install.sh
-~/.config/nvim/terminal/paintings/import.sh  # optional, see Themes
 nvim
 ```
 
@@ -26,8 +28,8 @@ depends on — but Homebrew cannot select it for you. Set your terminal's font t
 statusline separators, the git gutter and the diagnostic signs will all render
 as question marks. `:checkhealth nvim-config` prints a glyph probe to confirm.
 
-`install.sh` symlinks the tmux config, the `dev` session launcher, the starship
-prompt and the global gitignore into place. It backs up anything already there and
+`install.sh` symlinks the tmux config, the starship prompt, the lazygit config
+and the global gitignore into place. It backs up anything already there and
 **refuses** to overwrite a file you have edited locally, showing the diff instead.
 It never touches `~/.zshrc` — that file has machine-specific things in it, so the
 lines it needs are recorded in `terminal/zshrc.snippet` and only checked for.
@@ -40,7 +42,7 @@ the exact command to install anything missing.
 Jira needs three more commands and a Keychain entry, which are deliberately not
 automated — see [Jira](#jira).
 
-Language servers, linters and debug adapters are **not** in the Brewfile; Mason
+Language servers and linters are **not** in the Brewfile; Mason
 installs those. Note that `brew bundle check` also reports merely *outdated*
 formulae as unsatisfied, so don't read that as broken.
 
@@ -51,17 +53,18 @@ terminal, not in here. Nothing below will make sense without it.
 
 Then, in order:
 
-1. **Press `<Space>` and wait.** A menu appears showing every key that can follow.
-   This is the one habit worth forming; you never need to memorise this file.
+1. **Press `<C-p>` (or click ☰ in the statusline).** Every command in this config,
+   searchable, with its key shown beside it. When you don't know how, start here.
 2. **`<Space><Space>`** to open a file, **`<Space>fg`** to search across the project.
    Those two cover most navigation.
-3. **`gd`** jumps to a definition, **`<C-o>`** comes back. Treat them as browser
-   forward and back.
-4. **`<Space>gg`** for git. Everything else in git can wait.
-5. **`<Space>?`** is the cheatsheet whenever you're stuck.
+3. **`<Space>ns`** starts the project you're in (`yarn start` + `yarn wiremock`);
+   **`<Space>nS`** runs it inside shell-ui on a branch you pick. `<Space>nx` stops it.
+4. **`<Space>ac`** opens Claude; **`<Space>aq`** asks it about the line you're on.
+5. **`gd`** jumps to a definition, **`<C-o>`** comes back.
+6. **`<Space>gg`** for git, **`<Space>?`** for the cheatsheet.
 
-Ignore for now: debugging, GitHub Actions, the Angular CLI keys, multi-cursor.
-They're documented below when you want them.
+Pressing `<Space>` and waiting shows every key that can follow, so you never
+need to memorise this file. Right-click anything for what you can do with it.
 
 Two things that will save you: **`<Space>uu`** shows your undo history as a tree, so
 nothing is ever really lost, and reopening a file puts you back where you were.
@@ -77,16 +80,23 @@ job; if you want them back they are two entries in `lua/plugins/editor.lua`.
 ```
 ~/.config/nvim/
 ├── init.lua                 leader key + bootstrap
+├── colors/graphite.lua      the colourscheme (palette in lua/scheme/)
 ├── lua/config/
 │   ├── options.lua          editor behaviour, diagnostics, filetypes
 │   ├── keymaps.lua          keymaps that don't belong to a plugin
-│   ├── lazy.lua             plugin manager bootstrap
-│   ├── cheatsheet.lua       the <Space>? popup
+│   ├── services.lua         dev servers: start / shell-ui / stop / status
+│   ├── claude.lua           Claude position, conversations, "ask about this"
+│   ├── layout.lua           terminal positions + their clickable winbar
+│   ├── palette.lua          <C-p>: every command in one list
+│   ├── menu.lua             the right-click menus
+│   ├── scripts.lua          package.json scripts and tests
+│   ├── actions.lua          GitHub Actions + PRs via gh
 │   ├── jira.lua             sprint, board, transitions, comments
-│   └── projects.lua         project switcher over ~/projects
+│   ├── projects.lua         project switcher over ~/projects
+│   └── cheatsheet.lua       the <Space>? popup
 └── lua/plugins/
-    ├── ui.lua               colorscheme, statusline, buffer tabs, dashboard
-    ├── editor.lua           telescope, neo-tree, which-key, flash, treesitter
+    ├── ui.lua               statusline (and its buttons), buffer tabs, dashboard
+    ├── editor.lua           snacks.picker, neo-tree, which-key, flash, treesitter
     ├── lsp.lua              mason, language servers, completion
     ├── lint.lua             prettier/terraform fmt + tflint
     ├── git.lua              lazygit, gitsigns, diffview
@@ -111,36 +121,43 @@ Learn these first; everything else is discoverable by pressing `<Space>` and wai
 | `gr` | Find every reference |
 | `K` | Show documentation |
 | `<Space>ca` | Code actions (auto-import, quick fix) |
+| `<Space>ns` | Start this project (app + wiremock) |
 | `<Space>ac` | Claude |
+| `<C-p>` | Every command, searchable |
 | `<Space>?` | The full cheatsheet |
+
+### With the mouse
+
+Everything has a mouse route, and the statusline is the control panel:
+
+| Click | Does |
+|---|---|
+| `▶ Run` / the service dots | dev servers menu — right-click stops them all |
+| `✦ Claude` | show / hide Claude — right-click to move it |
+| `⚙ CI ✓` | this branch's workflow runs (shown when the repo has workflows) |
+| `☰` | every command, searchable |
+| the branch / diagnostics / diff | lazygit / Trouble / diffview |
+
+**Right-click** in code for code actions, rename, usages, hunks, *Ask Claude*,
+*Claude: fix this* (when the line has a diagnostic), *Test this component* and
+the dev servers. Right-click a file in the tree to create, rename, delete, stage,
+or add it to Claude's context. Terminal windows have move/hide buttons, splits
+resize by dragging, and the dashboard runs an entry on double-click.
 
 ### Themes
 
-`<Space>uT` picks a theme with a live preview; `<Space>ut` flips light/dark. Both
-choices are remembered next time you start.
+One theme, **Graphite** — warm neutral greys with amber and sage — in dark and
+light. `<Space>ut` flips between them and the choice is remembered.
 
-| Theme | Variants | |
-|---|---|---|
-| **graphite** *(default)* | dark / light | warm neutral greys, amber and sage |
-| **heather** | dark / light | pale lilac paper, orange and plum |
-| **malachite** | dark / light | cool charcoal, one green accent |
-| **umber** | dark / light | made from the paintings themselves |
-
-**All three ship in this repo** — `colors/*.lua` with palettes in
-`lua/scheme/palettes/` — and none is a plugin, because `~/.config/nvim` is already
+It **ships in this repo** — `colors/graphite.lua` with its palette in
+`lua/scheme/palettes/` — and is not a plugin, because `~/.config/nvim` is already
 on the runtime path. There is nothing to install and nothing to load eagerly to
 avoid a flash of the wrong colours; `init.lua` simply applies the saved one before
 lazy.nvim starts.
 
-They share one engine, `lua/scheme/init.lua`. A palette supplies colours by
-**role**, not by name, so adding a fourth theme means writing one palette file
-and a two-line `colors/` shim — not another ~500 lines of highlight groups.
-
-Graphite is warm neutral rather than the blue-greys everything else uses. Heather
-and Malachite were each built from five given colours, with the light and dark
-variants being the same five colours with their roles swapped — lilac is
-Heather's ground in one and its text in the other — rather than a second palette
-invented to sit beside the first.
+The highlight groups live in one engine, `lua/scheme/init.lua`, and the palette
+supplies colours by **role**, not by name — so adding another theme later means
+writing one palette file and a two-line `colors/` shim.
 
 The hue assignment is the actual design decision, not an afterthought:
 
@@ -161,144 +178,8 @@ recorded next to it in the palette file. Graphite's first draft failed on commen
 passed. Line numbers are the deliberate exception at ~2.5:1: a gutter should be
 present without competing with the code.
 
-Two of the colours Heather and Malachite were built from cannot be used as given,
-which is worth stating rather than quietly fudging:
-
-- `#E98A15` on Heather's `#ECE5F0` ground measures **2.10:1** — unreadable as body
-  text. The light variant darkens it to `#8e540d` (4.97:1) for functions and keeps
-  the pure orange only where it sits *behind* text: the cursor, IncSearch, the
-  lualine mode chip.
-- `#59114D` and `#003B36` on Heather's dark `#012622` ground measure 1.24:1 and
-  1.29:1, so the dark variant lightens both until they clear 6:1.
-
-Malachite needed less work: on `#272D2D`, four of its five colours land on their
-role unadjusted — mauve 5.21:1, steel 8.00:1, snow 12.72:1, green 6.74:1.
-
-Both themes have three source hues covering six syntax roles, so pairs share a hue
-and separate by lightness. Graphite does the same with its two warm tones.
-
 lualine's `theme = "auto"` produced a grey-on-grey statusline (3.34:1), so
 `lua/scheme/lualine.lua` builds the table from whichever palette is active.
-
-**Umber was derived, not chosen.** All eight paintings in `terminal/paintings/src/`
-were quantised, pooled — 183 colours weighted by pixel count — and clustered by
-hue:
-
-| Cluster | Mean | Share | Becomes |
-|---|---|---|---|
-| near-black | `#1b130e` | 15.2% | the dark ground |
-| deep umber | `#49341e` | 26.1% | surface, raised, gutter |
-| warm mid | `#a99c7c` | 21.5% | `dim`, and the comment hue |
-| gold / ochre | `#96723a` | 6.6% | functions |
-| cream | `#ebead8` | 6.2% | the light ground, and dark's text |
-| olive foliage | `#a8ae96` | 1.7% | strings |
-| slate sky | `#b3cbca` | 0.3% | numbers |
-
-Rembrandt's red-brown `#53261a` carries keywords and errors — the one strong hue
-in the set that is neither earth nor sky.
-
-The point of that ground is that it is **the paintings' own darkest tone**.
-`import.sh` maps each painting's black point onto the theme's ground, so under
-Umber the image has no edge at all: there is no rectangle, the picture just
-dissolves into the page.
-
-### Background paintings
-
-A Dutch Golden Age landscape sits behind the code. **`<Space>ub`** picks one, with
-a live preview as you move through the list, and remembers the choice. *Random
-each launch* and *No background* are entries in the same list.
-
-```
-brew bundle --file=~/.config/nvim/Brewfile   # for imagemagick
-~/.config/nvim/terminal/paintings/import.sh
-```
-
-The original paintings are committed in `terminal/paintings/src`, so a fresh
-clone renders without hunting them down again — they are the only binaries in
-this repo and the exception is deliberate. `import.sh` reads the files named in
-`terminal/paintings/manifest.tsv` from there. `~/Downloads` is the inbox rather
-than the store: to add a painting, drop it in Downloads, add a manifest line and
-re-run — it gets copied into `src/` ready to commit.
-
-**Neovim cannot draw a background image.** Nothing in the editor can — it paints
-character cells, not pixels. So the image comes from **iTerm2** underneath, with
-The theme made transparent so it shows through. `lua/config/painting.lua` is only
-the switch: it sends iTerm2 an `OSC 1337` escape code on `VimEnter` and clears it
-on `VimLeavePre`, which is why your shell, lazygit and `dev` sessions stay plain.
-Nothing is emitted in any other terminal, so this is inert over SSH and headless.
-
-#### Why the paintings are tone-mapped rather than faded
-
-The obvious approach is to blend the painting over the ground colour at some low
-opacity. Measuring it killed that idea. A dark ground is so dark, and its
-comment colour so close to the 4.5:1 floor already, that the brightest part of a
-sky hits the limit at **2–3% opacity** — indistinguishable from no painting at
-all. The constraint is not *how much painting* but *how bright the background may
-get*, and blending spends that entire budget on a few blown-out highlights.
-
-So each painting is instead **tone-mapped into the band the theme can afford**:
-its darkest tone becomes the ground colour exactly, its brightest becomes a
-ceiling, and everything between is redistributed across that range. Same
-worst-case contrast, far more of the picture visible. It also equalises them —
-a near-black van der Neer nocturne and a near-white van Goyen river come out at
-the same weight, which is the point of having eight.
-
-The ceilings are solved, not chosen: each is the furthest the ground can travel
-toward the text colour while comment text still clears 4.5:1. Every theme has its
-own band, recorded as `ground`, `ceiling` and `comment_on_painting` in
-`lua/scheme/palettes/<theme>.lua` — `import.sh` reads them from there rather than
-carrying its own copy:
-
-| Theme | dark ground → ceiling | light ceiling → ground |
-|---|---|---|
-| graphite | `#17161a` → `#363436` | `#d8d5d0` → `#faf7f2` |
-| heather | `#012622` → `#22423f` | `#cbc5ce` → `#ECE5F0` |
-| malachite | `#272D2D` → `#414646` | `#ccd3d9` → `#EDF5FC` |
-| umber | `#1b130e` → `#3a332c` | `#cac9ba` → `#ebead8` |
-
-**Each theme gets its own render of every painting** — `<slug>-<theme>-<variant>.png`.
-A painting mapped into one theme's band and shown behind another is wrong twice
-over: its darkest tone no longer equals the ground, so the image sits in a
-visible rectangle, and its 4.5:1 guarantee was solved against a different text
-colour. That is 8 paintings × 2 variants × 4 themes = 64 files, about 72MB in
-`~/.local/share/nvim/paintings` — not in this repo. `import.sh --theme umber`
-renders just one.
-
-The comment shift is the price, and it is **only** paid while a painting is
-showing — the palette carries it as `comment_on_painting`, and picking *No
-background* restores the original colours along with the solid ground. Body text
-is unaffected either way.
-
-`import.sh` measures the ratio back off each rendered file and prints it, rather
-than trusting the arithmetic. All 64 report `ok`.
-
-Two variants exist per painting, dark and paper-light, so `<Space>ut` swaps the
-background along with the theme instead of leaving a grey rectangle behind, and
-`<Space>uT` swaps it again for the new theme's own render.
-
-Floats, popups, the completion menu, the statusline and Telescope stay **opaque**
-on purpose. Those are where you most need text to be unambiguous, and a painting
-behind a hover window is just noise.
-
-| Command | |
-|---|---|
-| `:Painting` | the picker, same as `<Space>ub` |
-| `:PaintingNext` | a different painting, now |
-| `:PaintingOff` | back to the solid theme |
-
-The *renders* stay out of the repo, in `~/.local/share/nvim/paintings` (~25MB) —
-they are derived files and `import.sh` rebuilds them in seconds. They are PNG8: quantising to a palette dithers away the contour lines a
-band this narrow would otherwise show, and costs a tenth of what adding grain to
-a truecolour PNG did.
-
-The attributions in the manifest were identified from the images themselves, not
-read off a museum record — the Rembrandt and the two Cuyps are certain, the rest
-are confident. Only the picker label depends on them.
-
-If a painting never appears, `:checkhealth nvim-config` reports on each link in
-the chain separately — terminal, rendered files, the saved choice, ImageMagick,
-and tmux's `allow-passthrough`, which tmux needs before it will forward the
-escape code at all.
 
 The file explorer opens on the **right** (`<Space>e`), so toggling it doesn't shift
 your code sideways.
@@ -370,9 +251,9 @@ logs and watching all work without it.
 
 ### Pull requests
 
-`<Space>pl` lists this repo's PRs, `<Space>pp` opens the one for your branch,
-`<Space>pr` starts a review and `<Space>pR` submits it. `<Space>pi` for issues,
-`<Space>ps` to search. It drives the `gh` CLI you're already logged into.
+`<Space>pp` opens this branch's PR in the browser, `<Space>pc` starts one there,
+and `<Space>pk` shows its checks in a buffer. Reviewing happens in the browser
+(or `<Space>gm` for the whole branch as a diff here).
 
 ### Jira
 
@@ -484,9 +365,15 @@ it. It's suppressed in the tree, terminals, lists and diff views.
 don't have to escape terminal mode first. `<Space>wm` maximises the current split
 and restores it, `<Space>wo` closes every other window.
 
-Terminals: `<Space>tt` floats one, `<Space>tn` opens one at the project root,
-`<Space>tl` lists and switches between them, `<Space>t1`–`<Space>t3` jump directly,
-`<Space>tx` closes the current one and `<Space>tX` closes them all.
+Terminals: `<Space>tt` floats one, `<Space>th` / `<Space>tv` put one at the
+bottom / on the right, `<Space>tn` opens one at the project root, `<Space>tl`
+lists and switches between them, `<Space>t1`–`<Space>t3` jump directly,
+`<Space>tx` closes the current one and `<Space>tX` closes them all (dev servers
+are left running — `<Space>nx` stops those).
+
+Every terminal — and Claude — has a bar across the top with **⇱ float ⬓ bottom
+◨ right ✕ hide** buttons, so you can move one or put it away with a click.
+`<Space>tm` does the same from the keyboard, cycling float → bottom → right.
 
 And `q` closes the read-only windows that otherwise strand you — help, quickfix,
 `:checkhealth`, `:LspInfo`, blame.
@@ -627,10 +514,39 @@ In `<Space>ngx`, `serve` / `build` / `test` / `lint` go through the repo's
 
 ### Running the project
 
-`<Space>nr` lists the scripts in this repo's `package.json` and runs the one you
-pick with `yarn`, in a terminal at the project root. It runs the *named script*,
-never a reconstructed command — which is why `advertiser-payments-ui` correctly
-runs its `load-env.mjs` prelude before `ng test`.
+Every front-end repo here has the same shape — `yarn start` serves the app,
+`yarn wiremock` serves its stubs — and remotes normally run inside **shell-ui**.
+So, from any repo in `~/projects`:
+
+| Key | Does |
+|---|---|
+| `<Space>ns` | `yarn start` + `yarn wiremock` for this project |
+| `<Space>nS` | pick a **shell-ui branch**, then run shell-ui + its wiremock + this project |
+| `<Space>nx` | stop everything |
+| `<Space>nX` / `<Space>nR` | stop / restart one |
+| `<Space>nv` | show a server's output |
+| `<Space>ae` | send a server's output to Claude to fix |
+
+The statusline shows what is running — `● app  ● shell@RAP-1999  ● shell-mock` —
+coloured by state (starting, ready, crashed). **Click it** for the same menu;
+right-click stops everything. When nothing is running it reads `▶ Run`.
+
+What `<Space>nS` does with shell-ui, in `~/projects/shell-ui`:
+
+- switches it to the branch you picked with `git switch` — and **refuses** if it
+  has uncommitted changes, rather than carrying them across;
+- runs `yarn install` first only if `yarn.lock` differs between the two branches;
+- runs **shell-ui's** wiremock, not the project's: shell-ui owns the stubs the
+  host needs. A project's own wiremock only runs when you start it standalone.
+
+The servers run in hidden terminals: they don't clutter the window, they keep
+their output after a crash (you get a notification with the exit code), and
+quitting Neovim stops them. Each is started as the named yarn script through
+`direnv exec`, so a repo's `.envrc` applies.
+
+`<Space>nr` lists every script in `package.json` and runs the one you pick. It
+runs the *named script*, never a reconstructed command, so env preludes like
+`node scripts/load-env.mjs dev && …` still run.
 
 A daily loop:
 
@@ -640,7 +556,7 @@ A daily loop:
 4. `<Space>ca` on a red squiggle for the quick fix
 5. `<Space>cf` to apply every ESLint autofix in the file
 6. Save — Prettier formats with *this repo's* version
-7. `<Space>tn` for a terminal at the project root, then `yarn start`
+7. `<Space>ns` to serve it (or `<Space>nS` inside shell-ui)
 
 If a repo has no `node_modules`, run `yarn install` first — the language servers
 have nothing to read until then.
@@ -657,44 +573,15 @@ keys drive the repo's own test script with Karma's `--include`:
 | `<Space>nt` | just this component's spec |
 | `<Space>na` | the whole suite, once |
 | `<Space>nw` | the whole suite, watching |
-| `<Space>ns` | the dev server |
 | `<Space>nl` | lint |
 | `<Space>nr` | pick any script |
 
 `<Space>nt` works from the `.ts`, the `.html` or the `.scss` — it resolves the
 component's spec either way. Where a repo defines `test-headless` it uses that,
 so no Chrome window appears; otherwise it appends `--watch=false` for a one-shot
-run. In `advertiser-payments-ui` a focused run is ~15 seconds against 2 tests
-rather than the full 136-spec suite.
+run — a focused run takes seconds rather than the whole suite.
 
-## 5. Debugging
-
-`<Space>db` sets a breakpoint, `<Space>dc` starts. The debugger drives Chrome
-through `js-debug-adapter` and maps the running bundle back to your `.ts` files.
-
-| Key | Does |
-|---|---|
-| `<Space>db` / `<Space>dB` | breakpoint / conditional breakpoint |
-| `<Space>dc` | start or continue |
-| `<Space>di` `<Space>do` `<Space>dO` | step into / over / out |
-| `<Space>du` | show or hide the panels |
-| `<Space>dw` | watch the expression under the cursor |
-| `<Space>dt` | stop |
-
-Start the dev server first (`<Space>ns`), then `<Space>dc` and pick
-**"launch Chrome on the dev server"**. Chrome opens in a separate profile, so your
-normal session and its tabs are untouched. The alternative config attaches to a
-Chrome you started yourself with `--remote-debugging-port=9222`.
-
-Nothing debug-related loads until you press a `<Space>d` key, so it costs nothing
-on startup if you never use it.
-
-**If a breakpoint goes hollow and never hits**, the source maps aren't lining up —
-adjust `source_map_overrides` in `lua/plugins/debug.lua`. Angular's dev server
-changed how it emits map paths in v17, so this is the setting most likely to need
-a nudge on a given repo.
-
-## 6. CSV files
+## 5. CSV files
 
 You have 541 of them. Open one and it renders as an aligned table, quoted fields
 and all — `<Space>uv` toggles back to raw text, `<Tab>` and `<S-Tab>` jump between
@@ -713,7 +600,7 @@ the `bigfile` filetype to keep the editor responsive, so `aa_DJ.awin.csv` (1.6 M
 11,196 rows) opens as plain text with a note telling you to press `<Space>uv`. The
 manual toggle works fine on it.
 
-## 7. Terraform and infrastructure
+## 6. Terraform and infrastructure
 
 `terraform-ls` gives completion and hover docs on `aws_*` resources, and
 `terraform fmt` runs on save. `tflint` adds lint diagnostics.
@@ -731,7 +618,7 @@ servers too.
 
 ---
 
-## 8. Git, and learning lazygit
+## 7. Git, and learning lazygit
 
 `<Space>gg` opens lazygit for whatever repo the current file is in. It's
 configured with `delta` for readable diffs and `nvim` as its editor.
@@ -810,9 +697,10 @@ Use `--local` instead of `--global` if you'd rather set them per repository.
 
 ---
 
-## 9. Claude
+## 8. Claude
 
-`<Space>ac` opens Claude in a split, sharing the project directory.
+`<Space>ac` opens Claude, sharing the project directory. The `✦ Claude` button in
+the statusline does the same; right-click it to move the window.
 
 The reason it's a plugin and not just a terminal: select some lines, press
 `<Space>as`, and Claude receives them as a real file reference. When it proposes
@@ -820,12 +708,33 @@ an edit, the edit opens as a **native Neovim diff** — your version on the left
 its version on the right. `<Space>aa` accepts, `<Space>ad` rejects. You review
 before anything touches your file.
 
-`<Space>ab` adds the whole current file to its context. `<Space>tc` is a plain
-`claude` terminal if you'd rather use the CLI directly.
+**Where it sits.** `<Space>ap` (or the `⇱ ⬓ ◨` buttons on its window bar) puts it
+on the right, at the bottom, floating, or on the left. The choice is remembered,
+and moving it never interrupts the conversation. `<Space>a=` / `<Space>a-` resize
+it, or drag the separator.
+
+**Conversations.** `<Space>aC` continues the last conversation in this project.
+`<Space>ar` lists earlier ones by their first prompt and age, and resumes the one
+you pick. `<Space>an` starts fresh.
+
+**Asking about code** — all of these work on the line you're on or a selection,
+and start Claude with the question if it isn't running yet:
+
+| Key | Does |
+|---|---|
+| `<Space>aq` | ask a question about this line / selection |
+| `<Space>ax` | fix the diagnostics on it |
+| `<Space>ai` | explain it |
+| `<Space>at` | write tests for this component |
+| `<Space>aR` | review your uncommitted changes |
+| `<Space>ae` | hand it a dev server's error output |
+| `<Space>ab` | add the whole file to its context |
+
+The same entries are in the right-click menu.
 
 ---
 
-## 10. When something breaks
+## 9. When something breaks
 
 | Symptom | Check |
 |---|---|
@@ -843,7 +752,7 @@ before anything touches your file.
 
 ---
 
-## 11. Updating
+## 10. Updating
 
 - `:Lazy` → `U` updates plugins. `lazy-lock.json` records exact versions; commit it.
 - `:Mason` → `U` updates language servers.

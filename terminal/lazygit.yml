@@ -39,8 +39,8 @@ gui:
   filterMode: fuzzy
   # Theme --------------------------------------------------------------------
   # Named colours, not hex. Names resolve through ANSI 0-15, which
-  # lua/scheme/init.lua sets from the active palette, so Graphite, Heather,
-  # Malachite and Umber each repaint lazygit for free, light variants included.
+  # lua/scheme/init.lua sets from the active palette, so Graphite light and
+  # dark each repaint lazygit for free.
   # This block used to carry tokyonight's #7aa2f7 and outlived that theme's
   # removal by two commits, which is what hex in here always does.
   theme:

@@ -2,9 +2,11 @@
 -- Plugin-owned keymaps live next to their plugin in lua/plugins/*.lua.
 local map = vim.keymap.set
 
--- The cheatsheet ------------------------------------------------------------
+-- The cheatsheet, and the palette of every command ---------------------------
 map("n", "<leader>?", function() require("config.cheatsheet").open() end,
   { desc = "Cheatsheet" })
+map("n", "<C-p>", function() require("config.palette").open() end, { desc = "Command palette" })
+map("n", "<leader>P", function() require("config.palette").open() end, { desc = "Command palette" })
 
 -- The full write-up. This is the README in the repo this config lives in, so
 -- it moves with the config instead of pointing at a link that will rot.
@@ -12,18 +14,9 @@ map("n", "<leader>gu", function()
   vim.ui.open("https://github.com/andreiserdulet1/nvim-config#readme")
 end, { desc = "Open the web guide" })
 
--- Themes. <leader>ut flips light/dark within the current family; <leader>uT
--- picks any of them with a live preview. Both persist across restarts.
--- See lua/config/theme.lua for why the two mechanisms differ.
+-- Theme: Graphite, light or dark. Persists across restarts.
 map("n", "<leader>ut", function() require("config.theme").toggle_background() end,
   { desc = "Toggle light / dark" })
-map("n", "<leader>uT", function() require("config.theme").menu() end,
-  { desc = "Pick a colourscheme" })
-
--- Background paintings, previewed the same way. "No background" is an entry in
--- the list, so this is also how you turn the whole thing off.
-map("n", "<leader>ub", function() require("config.painting").menu() end,
-  { desc = "Pick a background painting" })
 
 -- Colour swatches in CSS/SCSS are native in Neovim 0.12: cssls advertises
 -- colorProvider and vim.lsp.document_color renders the swatches, on by
@@ -73,8 +66,21 @@ map("n", "<leader>nr", scripts("pick"), { desc = "Pick a package.json script" })
 map("n", "<leader>nt", scripts("test_file"), { desc = "Test this component" })
 map("n", "<leader>na", scripts("test_all", false), { desc = "Test everything (once)" })
 map("n", "<leader>nw", scripts("test_all", true), { desc = "Test everything (watch)" })
-map("n", "<leader>ns", scripts("run", "start"), { desc = "Start the dev server" })
 map("n", "<leader>nl", scripts("run", "lint"), { desc = "Lint" })
+
+-- Dev servers: this project's start + wiremock, optionally inside shell-ui.
+-- Shown in the statusline; click it for the same menu. See config/services.lua.
+local svc = function(fn, ...)
+  local args = { ... }
+  return function() require("config.services")[fn](unpack(args)) end
+end
+map("n", "<leader>ns", svc("start"), { desc = "Start project (start + wiremock)" })
+map("n", "<leader>nS", svc("start_with_shell"), { desc = "Start inside shell-ui (pick branch)" })
+map("n", "<leader>nx", svc("stop"), { desc = "Stop all dev servers" })
+map("n", "<leader>nX", svc("stop_pick"), { desc = "Stop one dev server" })
+map("n", "<leader>nR", svc("restart"), { desc = "Restart a dev server" })
+map("n", "<leader>nv", svc("logs"), { desc = "Show dev server output" })
+map("n", "<leader>nn", svc("menu"), { desc = "Dev servers menu" })
 
 -- GitHub Actions -----------------------------------------------------------
 -- Reading runs is unguarded; dispatching always confirms, and anything aimed
@@ -89,6 +95,11 @@ map("n", "<leader>Af", acts("logs", nil, true), { desc = "Failed steps of the la
 map("n", "<leader>Aw", acts("watch"), { desc = "Watch the running workflow" })
 map("n", "<leader>Ar", acts("rerun"), { desc = "Re-run failed jobs" })
 map("n", "<leader>Ad", acts("dispatch"), { desc = "Dispatch a workflow (confirms)" })
+
+-- Pull requests: viewing and creating happen in the browser, where the form is.
+map("n", "<leader>pp", acts("pr_view"), { desc = "PR for this branch (browser)" })
+map("n", "<leader>pc", acts("pr_create"), { desc = "Create a PR (browser)" })
+map("n", "<leader>pk", acts("pr_checks"), { desc = "Checks on this branch's PR" })
 
 -- Jira ----------------------------------------------------------------------
 -- The sprint, the board and the four things that interrupt coding: move,

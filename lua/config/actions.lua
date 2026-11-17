@@ -412,4 +412,81 @@ function M.dispatch()
   end)
 end
 
+---------------------------------------------------------------------------
+-- Pull requests (read-only, or handed to the browser)
+---------------------------------------------------------------------------
+
+--- Open this branch's PR in the browser.
+function M.pr_view()
+  local root, err = repo()
+  if not root then vim.notify(err, vim.log.levels.WARN) return end
+  local res = gh({ "pr", "view", "--web" }, root)
+  if res.code ~= 0 then
+    vim.notify("No PR for " .. current_branch(root) .. " — <leader>pc to create one", vim.log.levels.WARN)
+  end
+end
+
+--- Start a PR for this branch in the browser, where the form is.
+function M.pr_create()
+  local root, err = repo()
+  if not root then vim.notify(err, vim.log.levels.WARN) return end
+  local res = gh({ "pr", "create", "--web" }, root)
+  if res.code ~= 0 then
+    vim.notify(vim.trim((res.stderr or "") .. (res.stdout or "")), vim.log.levels.ERROR)
+  end
+end
+
+--- The checks on this branch's PR, in a scratch buffer.
+function M.pr_checks()
+  local root, err = repo()
+  if not root then vim.notify(err, vim.log.levels.WARN) return end
+  local res = gh({ "pr", "checks" }, root)
+  local text = vim.trim((res.stdout or "") .. "\n" .. (res.stderr or ""))
+  show_output("checks-" .. current_branch(root), text ~= "" and text or "No checks")
+end
+
+---------------------------------------------------------------------------
+-- Statusline: the latest run on this branch
+---------------------------------------------------------------------------
+
+-- Cached per repo+branch and refreshed in the background at most once a
+-- minute, so the statusline never waits on the network.
+local ci_cache, ci_pending = {}, {}
+local CI_TTL = 60
+
+function M.ci_status()
+  local dir = vim.fn.expand("%:p:h")
+  if dir == "" or vim.fn.isdirectory(dir) == 0 then dir = vim.uv.cwd() end
+  local root = vim.fs.root(dir, ".git")
+  if not root or vim.fn.isdirectory(root .. "/.github/workflows") == 0 then return "" end
+  if vim.fn.executable("gh") == 0 then return "" end
+
+  local head = vim.b.gitsigns_head or ""
+  local key = root .. "@" .. head
+  local entry = ci_cache[key]
+  if (not entry or os.time() - entry.at > CI_TTL) and not ci_pending[key] then
+    ci_pending[key] = true
+    local args = { "gh", "run", "list", "--limit", "1", "--json", "status,conclusion" }
+    if head ~= "" then vim.list_extend(args, { "--branch", head }) end
+    vim.system(args, { cwd = root, text = true }, function(res)
+      local text = ""
+      if res.code == 0 then
+        local ok, runs = pcall(vim.json.decode, res.stdout or "")
+        local run = ok and type(runs) == "table" and runs[1] or nil
+        if run then
+          text = run.status == "completed" and (ICON[run.conclusion] or "?")
+            or (run.status == "in_progress" and "●" or "○")
+        end
+      end
+      vim.schedule(function()
+        ci_cache[key] = { at = os.time(), text = text }
+        ci_pending[key] = nil
+        pcall(function() require("lualine").refresh() end)
+      end)
+    end)
+  end
+  local text = entry and entry.text or ""
+  return text ~= "" and ("⚙ CI " .. text) or ""
+end
+
 return M

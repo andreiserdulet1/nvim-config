@@ -4,7 +4,8 @@
 --- diagnostics entries, cut/copy/paste -- and hands it to you the moment
 --- `mouse` is set. What it cannot know is which of this config's actions you
 --- reach for, so this adds them: the LSP three, formatting, the gitsigns hunk
---- operations, lazygit, and sending a selection to Claude.
+--- operations, lazygit, asking Claude about the code under the pointer,
+--- testing the component, the dev servers, and the command palette.
 ---
 --- The point is discovery. Every one of these already has a keymap, and none of
 --- them are findable without knowing the keymap first; right-clicking the thing
@@ -24,6 +25,11 @@ local lsp_items = {
   [[PopUp.Code\ action]],
   [[PopUp.Rename\ symbol]],
   [[PopUp.Find\ usages]],
+}
+
+-- Only offered when there is a diagnostic on the clicked line.
+local diag_items = {
+  [[PopUp.Claude:\ fix\ this]],
 }
 
 local git_items = {
@@ -61,8 +67,8 @@ function M.setup()
     vnoremenu 100.10 PopUp.Code\ action        <Cmd>lua vim.lsp.buf.code_action()<CR>
     anoremenu 100.20 PopUp.Rename\ symbol      <Cmd>lua vim.lsp.buf.rename()<CR>
     anoremenu 100.30 PopUp.Find\ usages        <Cmd>Trouble lsp_references toggle<CR>
-    anoremenu 100.35 PopUp.Search\ the\ project <Cmd>Telescope grep_string<CR>
-    vnoremenu 100.35 PopUp.Search\ the\ project <Cmd>Telescope grep_string<CR>
+    anoremenu 100.35 PopUp.Search\ the\ project <Cmd>lua Snacks.picker.grep_word()<CR>
+    vnoremenu 100.35 PopUp.Search\ the\ project <Cmd>lua Snacks.picker.grep_word()<CR>
     anoremenu 100.40 PopUp.Format              <Cmd>lua require("conform").format({ async = true, lsp_format = "fallback" })<CR>
     anoremenu 100.50 PopUp.-hunks-             <Nop>
     anoremenu 100.60 PopUp.Stage\ this\ hunk   <Cmd>Gitsigns stage_hunk<CR>
@@ -70,7 +76,17 @@ function M.setup()
     anoremenu 100.70 PopUp.Preview\ this\ hunk <Cmd>Gitsigns preview_hunk_inline<CR>
     anoremenu 100.80 PopUp.Blame\ this\ line   <Cmd>lua require("gitsigns").blame_line({ full = true })<CR>
     anoremenu 100.90 PopUp.lazygit             <Cmd>LazyGit<CR>
+    anoremenu 100.91 PopUp.-claude-            <Nop>
+    anoremenu 100.92 PopUp.Ask\ Claude\ about\ this <Cmd>lua require("config.claude").ask()<CR>
+    vnoremenu 100.92 PopUp.Ask\ Claude\ about\ this <Cmd>lua require("config.claude").ask()<CR>
+    anoremenu 100.93 PopUp.Claude:\ fix\ this  <Cmd>lua require("config.claude").fix()<CR>
+    anoremenu 100.94 PopUp.Claude:\ explain    <Cmd>lua require("config.claude").explain()<CR>
+    vnoremenu 100.94 PopUp.Claude:\ explain    <Cmd>lua require("config.claude").explain()<CR>
     vnoremenu 100.95 PopUp.Send\ to\ Claude    <Cmd>ClaudeCodeSend<CR>
+    anoremenu 100.96 PopUp.-run-               <Nop>
+    anoremenu 100.97 PopUp.Test\ this\ component <Cmd>lua require("config.scripts").test_file()<CR>
+    anoremenu 100.98 PopUp.Dev\ servers…       <Cmd>lua require("config.services").menu()<CR>
+    anoremenu 100.99 PopUp.All\ commands…      <Cmd>lua require("config.palette").open()<CR>
   ]])
 
   vim.api.nvim_create_autocmd("MenuPopup", {
@@ -79,6 +95,7 @@ function M.setup()
     callback = function()
       -- Nothing to rename or act on without a server attached.
       set_enabled(lsp_items, vim.lsp.get_clients({ bufnr = 0 })[1] ~= nil)
+      set_enabled(diag_items, #vim.diagnostic.get(0, { lnum = vim.fn.line(".") - 1 }) > 0)
       -- gitsigns sets this when it attaches, which it only does inside a repo.
       set_enabled(git_items, vim.b.gitsigns_status_dict ~= nil)
     end,
@@ -128,6 +145,9 @@ function M.tree(state)
   entry("Copy to...", function() commands.copy(state) end)
   entry("Move to...", function() commands.move(state) end)
   entry("Delete", function() commands.delete(state) end)
+  entry("Add to Claude's context", function()
+    vim.cmd("ClaudeCodeAdd " .. vim.fn.fnameescape(node.path))
+  end)
   entry("Copy the path", function()
     vim.fn.setreg("+", node.path)
     vim.notify(node.path)

@@ -10,7 +10,6 @@ return {
     branch = "1.0",
     keys = {
       { "<C-n>", mode = { "n", "x" }, desc = "Cursor at next match" },
-      { "<C-p>", mode = { "n", "x" }, desc = "Skip this match" },
       { "<leader>ma", mode = { "n", "x" }, desc = "Cursor on every match" },
       { "<leader>mj", desc = "Add cursor below" },
       { "<leader>mk", desc = "Add cursor above" },
@@ -25,8 +24,6 @@ return {
       -- Grow the cursor set by matching the word or selection.
       map({ "n", "x" }, "<C-n>", function() mc.matchAddCursor(1) end,
         { desc = "Cursor at next match" })
-      map({ "n", "x" }, "<C-p>", function() mc.matchSkipCursor(1) end,
-        { desc = "Skip this match" })
       map({ "n", "x" }, "<leader>ma", mc.matchAllAddCursors,
         { desc = "Cursor on every match" })
 
@@ -41,6 +38,8 @@ return {
       mc.addKeymapLayer(function(layer_set)
         layer_set({ "n", "x" }, "<left>", mc.prevCursor)
         layer_set({ "n", "x" }, "<right>", mc.nextCursor)
+        -- Only while cursors exist; otherwise <C-p> is the command palette.
+        layer_set({ "n", "x" }, "<C-p>", function() mc.matchSkipCursor(1) end)
         layer_set({ "n", "x" }, "<leader>mx", mc.deleteCursor)
         layer_set("n", "<esc>", function()
           if mc.hasCursors() then mc.clearCursors() end
@@ -83,7 +82,7 @@ return {
       },
     },
     opts = {
-      -- Same exclusions Telescope uses, so a replace can never rewrite build
+      -- Same exclusions the pickers use, so a replace can never rewrite build
       -- output or a dependency.
       engines = {
         ripgrep = {
