@@ -108,6 +108,8 @@ function M.setup()
     vnoremenu 100.112 PopUp.Format\ selection   <Cmd>lua require("conform").format({ async = true, lsp_format = "fallback" })<CR>
     vnoremenu 100.113 PopUp.Sort\ lines         :sort<CR>
     anoremenu 100.114 PopUp.Undo\ history       <Cmd>UndotreeToggle<CR>
+    anoremenu 100.115 PopUp.Compare\ with…     <Cmd>lua require("config.compare").menu()<CR>
+    vnoremenu 100.115 PopUp.Compare\ with\ clipboard <Cmd>lua require("config.compare").with_clipboard()<CR>
     anoremenu 100.116 PopUp.Open\ on\ GitHub     <Cmd>lua require("config.copy").open_github()<CR>
     vnoremenu 100.116 PopUp.Open\ on\ GitHub     <Cmd>lua require("config.copy").open_github()<CR>
     anoremenu 100.120 PopUp.All\ commands…      <Cmd>lua require("config.palette").open()<CR>
@@ -195,6 +197,9 @@ function M.tree(state)
   entry("Add to Claude's context", function()
     vim.cmd("ClaudeCodeAdd " .. vim.fn.fnameescape(node.path))
   end)
+  entry(node.type == "directory" and "Compare this folder with another repo…" or "Compare with…", function()
+    require("config.compare").pick_other(node.path)
+  end)
   entry("Copy relative path", function() require("config.copy").copy_relative(node.path) end)
   entry("Copy absolute path", function()
     vim.fn.setreg("+", node.path)
@@ -254,6 +259,7 @@ function M.buffer(bufnr)
         end },
       { "Add to Claude's context", function() vim.cmd("ClaudeCodeAdd " .. vim.fn.fnameescape(path)) end },
       { "File history", function() vim.cmd("DiffviewFileHistory " .. vim.fn.fnameescape(path)) end },
+      { "Compare with…", function() require("config.compare").menu(path) end },
     })
   end
   vim.ui.select(items, {

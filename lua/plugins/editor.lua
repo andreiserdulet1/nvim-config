@@ -145,6 +145,7 @@ return {
         { "<leader>q", group = "session / quit" },
         { "<leader>w", group = "window" },
         { "<leader>y", group = "copy" },
+        { "<leader>D", group = "compare / two repos" },
       },
     },
     keys = {

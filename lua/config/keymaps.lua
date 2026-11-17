@@ -156,6 +156,19 @@ map("n", "<leader>yp", cp("relative"), { desc = "Copy relative path" })
 map("n", "<leader>yi", cp("import"), { desc = "Copy import line" })
 map("n", "<leader>fy", cp("history"), { desc = "Clipboard history" })
 
+-- Compare: before / after, and two repos at once ----------------------------
+-- See config/compare.lua. Every comparison opens in its own tab.
+local cmp = function(fn) return function() require("config.compare")[fn]() end end
+map("n", "<leader>Dd", cmp("menu"), { desc = "Compare this file with…" })
+map("n", "<leader>Dr", cmp("with_other_repo"), { desc = "…the same file in another repo" })
+map("n", "<leader>Db", cmp("with_branch"), { desc = "…another branch" })
+map("n", "<leader>Do", cmp("with_buffer"), { desc = "…another open file" })
+map({ "n", "x" }, "<leader>Dc", cmp("with_clipboard"), { desc = "…the clipboard" })
+map("n", "<leader>DF", cmp("folders"), { desc = "Compare two repos / folders" })
+map("n", "<leader>Dt", cmp("project_tab"), { desc = "Open another repo in a new tab" })
+map("n", "<leader>Ds", cmp("project_split"), { desc = "Open another repo beside this one" })
+map("n", "<leader>Dq", cmp("close"), { desc = "Close the comparison" })
+
 -- Saving / quitting ---------------------------------------------------------
 map({ "n", "i", "v" }, "<C-s>", "<cmd>write<cr><esc>", { desc = "Save file" })
 map("n", "<leader>qq", "<cmd>qa<cr>", { desc = "Quit all" })

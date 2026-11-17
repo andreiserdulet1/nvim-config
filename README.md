@@ -138,11 +138,55 @@ Everything has a mouse route, and the statusline is the control panel:
 | `☰` | every command, searchable |
 | the branch / diagnostics / diff | lazygit / Trouble / diffview |
 
-**Right-click** in code for code actions, rename, usages, hunks, *Ask Claude*,
-*Claude: fix this* (when the line has a diagnostic), *Test this component* and
-the dev servers. Right-click a file in the tree to create, rename, delete, stage,
-or add it to Claude's context. Terminal windows have move/hide buttons, splits
-resize by dragging, and the dashboard runs an entry on double-click.
+**Right-click** in code for *Copy…*, code actions, rename, usages, hunks, *Ask
+Claude*, *Claude: fix this* (when the line has a diagnostic), *Test this
+component*, *Go to template / styles / spec*, toggle comment, *Compare with…* and
+*Open on GitHub*. On a selection you also get format, sort and compare with the
+clipboard.
+
+Right-click a **file or folder in the tree** to create, rename, delete, stage, run
+its spec, search inside it, open a terminal there, `ng generate` into it, ask
+Claude about it, compare it with another repo, or copy its path or GitHub link.
+Right-click a **buffer tab** to close it / the others / everything to its right,
+pin it, reveal it, copy its path or link, or see its history (middle-click still
+closes). Right-click a **terminal** to paste, copy or send its output to Claude,
+move or hide it. Splits resize by dragging, and the dashboard runs an entry on
+double-click.
+
+### Copying
+
+Right-click → *Copy…*, `<Space>yy`, or click the file name in the statusline:
+
+| Key | Copies |
+|---|---|
+| `<Space>yg` | a **GitHub permalink** to the line / selection (pinned to the commit when it's pushed) |
+| `<Space>yr` | `src/app/x.component.ts:12-20` |
+| `<Space>ym` | the selection as a fenced Markdown block, path on top — for Jira, Slack, PRs |
+| `<Space>yp` | the relative path |
+| `<Space>yi` | `import { Symbol } from '…'`, relative to the file you came from |
+
+The menu also has the absolute path, file name, the diagnostic on the line, the
+Jira key from your branch and the branch name. `<Space>fy` is **clipboard history**
+for the session: `<CR>` pastes an earlier copy, `<C-y>` puts it back on the
+clipboard.
+
+### Comparing, and two repos at once
+
+Every comparison opens in its own tab, labelled on top, with ✕ to close it
+(`<Space>Dq`). `]c` / `[c` walk the changes; `do` takes the other side's.
+
+| Key | Compares |
+|---|---|
+| `<Space>Dr` | this file with the **same path in another repo** — migrations |
+| `<Space>Db` | this file with another branch |
+| `<Space>Do` / `<Space>Dc` | with another open file / with the clipboard |
+| `<Space>DF` | **two repos or folders, file by file**: every changed, added and removed file, with a diff preview; `<CR>` opens one, `<Space>fc` returns to the list |
+
+To **work in two repos at once**, `<Space>Dt` opens another repo in a new tab
+with its own working directory — the pickers, grep, the tree, terminals and
+`<Space>ns` all act on that repo while you're in the tab (`gt`/`gT`, or click the
+tab numbers top-right, to switch). `<Space>Ds` does the same in a split beside
+your current file.
 
 ### Themes
 

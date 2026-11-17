@@ -69,6 +69,25 @@ M.sections = {
     },
   },
   {
+    "COMPARE & TWO REPOS  (each comparison opens in its own tab)",
+    {
+      { "<leader>Dd", "Compare this file with… (pick)" },
+      { "<leader>Dr", "…the same path in another repo (migration)" },
+      { "<leader>Db", "…another branch, tag or commit" },
+      { "<leader>Do", "…another open file" },
+      { "<leader>Dc", "…the clipboard (selection in visual mode)" },
+      { "<leader>DF", "Two repos / folders: every differing file, with" },
+      { "", "a diff preview; <CR> opens it, <leader>fc goes back" },
+      { "<leader>Dt", "Open another repo in a new tab (its own cwd:" },
+      { "", "pickers, grep, terminals, <leader>ns work there)" },
+      { "<leader>Ds", "Open another repo in a split beside this one" },
+      { "<leader>Dq", "Close the comparison  (or click ✕ on its bar)" },
+      { "]c / [c", "Next / previous change in a diff" },
+      { "do / dp", "Take the other side's change / give yours" },
+      { "gt / gT", "Next / previous tab" },
+    },
+  },
+  {
     "BUFFERS (your tabs along the top)",
     {
       { "<S-h> / <S-l>", "Previous / next buffer" },

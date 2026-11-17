@@ -47,6 +47,13 @@ M.items = {
   { "Copy", "Relative path", "<leader>yp", req("config.copy", "relative") },
   { "Copy", "Import line for this symbol", "<leader>yi", req("config.copy", "import") },
   { "Copy", "Clipboard history (paste)", "<leader>fy", req("config.copy", "history") },
+  -- Compare
+  { "Compare", "This file with… (repo, branch, file, clipboard)", "<leader>Dd", req("config.compare", "menu") },
+  { "Compare", "This file with the same file in another repo", "<leader>Dr", req("config.compare", "with_other_repo") },
+  { "Compare", "This file with another branch", "<leader>Db", req("config.compare", "with_branch") },
+  { "Compare", "Two repos / folders, file by file (migration)", "<leader>DF", req("config.compare", "folders") },
+  { "Compare", "Open another repo in a new tab", "<leader>Dt", req("config.compare", "project_tab") },
+  { "Compare", "Open another repo beside this one", "<leader>Ds", req("config.compare", "project_split") },
   -- Terminal
   { "Terminal", "Shell at the project root", "<leader>tn", function()
       vim.api.nvim_feedkeys(vim.keycode("<leader>tn"), "m", false)

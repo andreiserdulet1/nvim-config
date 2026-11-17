@@ -84,6 +84,18 @@ function M.open(dir)
   end
 end
 
+--- Pick a project and hand its path to `cb` (for compare.lua, project tabs).
+function M.choose(prompt, cb)
+  local projects = find_projects()
+  local home = vim.fn.expand("~")
+  vim.ui.select(projects, {
+    prompt = prompt,
+    format_item = function(path)
+      return string.format("%-50s %s", (path:gsub("^" .. vim.pesc(home), "~")), branch(path))
+    end,
+  }, function(choice) if choice then cb(choice) end end)
+end
+
 function M.pick()
   local projects = find_projects()
   if #projects == 0 then
