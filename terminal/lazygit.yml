@@ -81,8 +81,11 @@ git:
       command: delta --dark --paging=never --line-numbers --hyperlinks
   parseEmoji: false
 os:
-  # `e` on a file in lazygit opens it in Neovim.
-  editPreset: "nvim"
+  # `e` on a file opens it in the Neovim lazygit was started from (it closes
+  # the lazygit float first). Plain "nvim" started a second Neovim INSIDE the
+  # float, and copying from that copied its line numbers and gutter too.
+  # Outside Neovim it falls back to opening a normal nvim.
+  editPreset: "nvim-remote"
 confirmOnQuit: false
 quitOnTopLevelReturn: false
 disableStartupPopups: true

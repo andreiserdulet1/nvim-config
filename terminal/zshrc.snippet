@@ -26,3 +26,19 @@ source $(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zs
 # direnv must be initialised AFTER starship: its hook wraps the prompt command
 # that starship installs.
 eval "$(direnv hook zsh)"
+
+# Inside a Neovim terminal (toggleterm, <C-\>), `nvim file` / `v file` opens
+# the file in THAT Neovim instead of starting a second one nested in the
+# terminal -- a nested one is confusing to navigate, and copying from it copies
+# its line numbers and gutter as text.
+if [[ -n "$NVIM" ]]; then
+  nvim() {
+    if [[ $# -eq 0 ]]; then
+      echo "Already inside Neovim -- pass a file to open it there." >&2
+      return 1
+    fi
+    command nvim --server "$NVIM" --remote "$@"
+  }
+  alias v='nvim'
+fi
+
