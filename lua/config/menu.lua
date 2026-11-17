@@ -113,6 +113,7 @@ function M.setup()
     anoremenu 100.104 PopUp.Go\ to\ class      <Cmd>lua require("config.component").open("ts")<CR>
     anoremenu 100.97 PopUp.Test\ this\ component <Cmd>lua require("config.scripts").test_file()<CR>
     anoremenu 100.98 PopUp.Dev\ servers…       <Cmd>lua require("config.services").menu()<CR>
+    anoremenu 100.105 PopUp.Related\ files…    <Cmd>lua require("config.related").pick()<CR>
     anoremenu 100.110 PopUp.-edit-              <Nop>
     nnoremenu 100.111 PopUp.Toggle\ comment     <Cmd>normal gcc<CR>
     vnoremenu 100.111 PopUp.Toggle\ comment     <Cmd>normal gc<CR>

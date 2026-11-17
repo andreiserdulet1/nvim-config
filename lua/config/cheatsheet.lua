@@ -130,6 +130,7 @@ M.sections = {
       { "<leader>oh", "Go to its .html template" },
       { "<leader>os", "Go to its .scss styles" },
       { "<leader>op", "Go to its .spec.ts" },
+      { "<leader>or", "Related: the route, module, store, templates, usages" },
       { "<leader>oo", "Cycle through whichever of those exist" },
       { "<leader>nr", "Run a script from this repo's package.json" },
     },

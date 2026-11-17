@@ -120,6 +120,7 @@ M.items = {
   -- Angular
   { "Angular", "ng generate (pick a schematic)", "<leader>ngg", req("config.angular", "generate_pick") },
   { "Angular", "Component: cycle .ts / .html / .scss / .spec", "<leader>oo", req("config.component", "cycle") },
+  { "Angular", "Related: route, module, store, templates, usages", "<leader>or", req("config.related", "pick") },
   -- Toggles
   { "Toggle", "Light / dark", "<leader>ut", req("config.theme", "toggle_background") },
   { "Toggle", "Cheatsheet", "<leader>?", req("config.cheatsheet", "open") },

@@ -56,6 +56,8 @@ map("n", "<leader>os", component("style"), { desc = "Component: styles" })
 map("n", "<leader>op", component("spec"), { desc = "Component: spec" })
 map("n", "<leader>oo", function() require("config.component").cycle() end,
   { desc = "Component: cycle files" })
+map("n", "<leader>or", function() require("config.related").pick() end,
+  { desc = "Related: route, module, store, usages" })
 
 -- Run and test this project --------------------------------------------------
 local scripts = function(fn, ...)
