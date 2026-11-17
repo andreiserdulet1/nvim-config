@@ -204,12 +204,34 @@ end
 -- Two folders, file by file
 ---------------------------------------------------------------------------
 
+-- "Only in" can name a whole directory; list the files inside it instead, so
+-- a moved folder's files can be matched up one by one.
+local function expand(path, out)
+  if vim.fn.isdirectory(path) == 0 then
+    table.insert(out, path)
+    return
+  end
+  for name, t in vim.fs.dir(path, { depth = 20 }) do
+    local skip = false
+    for _, x in ipairs(EXCLUDE) do
+      if name == x or name:match("^" .. vim.pesc(x) .. "/") or name:match("/" .. vim.pesc(x) .. "/") then skip = true end
+    end
+    if t == "file" and not skip then table.insert(out, path .. "/" .. name) end
+    if #out > 3000 then return end
+  end
+end
+
+local function digest(path)
+  local ok, lines = pcall(vim.fn.readfile, path, "b")
+  return ok and vim.fn.sha256(table.concat(lines, "\n")) or nil
+end
+
 local function list_differences(a, b)
   local args = { "diff", "-rq" }
   for _, x in ipairs(EXCLUDE) do vim.list_extend(args, { "-x", x }) end
   vim.list_extend(args, { a, b })
   local res = vim.system(args, { text = true }):wait()
-  local items = {}
+  local items, only_left, only_right = {}, {}, {}
   for line in (res.stdout or ""):gmatch("[^\n]+") do
     local fa, fb = line:match("^Files (.-) and (.-) differ$")
     if fa then
@@ -218,13 +240,43 @@ local function list_differences(a, b)
       local dir, name = line:match("^Only in (.-): (.+)$")
       if dir then
         local full = dir .. "/" .. name
-        if vim.startswith(full, a .. "/") then
-          table.insert(items, { status = "−", rel = full:sub(#a + 2), left = full })
-        else
-          table.insert(items, { status = "+", rel = full:sub(#b + 2), right = full })
-        end
+        if vim.startswith(full, a .. "/") then expand(full, only_left) else expand(full, only_right) end
       end
     end
+  end
+
+  -- Renames and moves. Same content anywhere → R (moved, identical);
+  -- otherwise the same file name in a different folder → R~ (moved, changed).
+  local by_hash, by_name = {}, {}
+  for _, r in ipairs(only_right) do
+    local h = digest(r)
+    if h then by_hash[h] = by_hash[h] or r end
+    local n = vim.fs.basename(r)
+    by_name[n] = by_name[n] or {}
+    table.insert(by_name[n], r)
+  end
+  local used = {}
+  local function take(r) used[r] = true end
+  for _, l in ipairs(only_left) do
+    local h = digest(l)
+    local r = h and by_hash[h]
+    if r and not used[r] then
+      take(r)
+      table.insert(items, { status = "R", rel = l:sub(#a + 2) .. " → " .. r:sub(#b + 2), left = l, right = r, same = true })
+    else
+      local cands = by_name[vim.fs.basename(l)]
+      local pick
+      for _, c in ipairs(cands or {}) do if not used[c] then pick = c break end end
+      if pick then
+        take(pick)
+        table.insert(items, { status = "R~", rel = l:sub(#a + 2) .. " → " .. pick:sub(#b + 2), left = l, right = pick })
+      else
+        table.insert(items, { status = "−", rel = l:sub(#a + 2), left = l })
+      end
+    end
+  end
+  for _, r in ipairs(only_right) do
+    if not used[r] then table.insert(items, { status = "+", rel = r:sub(#b + 2), right = r }) end
   end
   table.sort(items, function(x, y) return x.rel < y.rel end)
   return items
@@ -243,29 +295,31 @@ function M.folders(start)
       it.idx, it.text = i, it.status .. " " .. it.rel
     end
     Snacks.picker.pick({
-      title = ("%s ↔ %s   (%d files)   − only left  + only right  M changed"):format(
+      title = ("%s ↔ %s   (%d)   M changed  R moved  R~ moved+changed  − left only  + right only"):format(
         label(a), label(b), #items),
       items = items,
       -- The unified diff, worked out only for the file you're on.
       preview = function(ctx)
         local it = ctx.item
-        local text = it.left and it.right
-          and vim.system({ "diff", "-u", it.left, it.right }, { text = true }):wait().stdout
-          or ("Only in " .. short(it.left or it.right))
+        local text = it.same and ("Moved, content identical:\n  " .. short(it.left) .. "\n→ " .. short(it.right))
+          or (it.left and it.right
+            and vim.system({ "diff", "-u", it.left, it.right }, { text = true }):wait().stdout
+            or ("Only in " .. short(it.left or it.right)))
         ctx.preview:reset()
         ctx.preview:set_lines(vim.split(text, "\n"))
         ctx.preview:highlight({ ft = "diff" })
       end,
       format = function(item)
-        local hl = ({ M = "DiagnosticWarn", ["+"] = "DiagnosticOk", ["−"] = "DiagnosticError" })[item.status]
-        return { { item.status .. " ", hl }, { item.rel } }
+        local hl = ({ M = "DiagnosticWarn", ["+"] = "DiagnosticOk", ["−"] = "DiagnosticError",
+          R = "Comment", ["R~"] = "DiagnosticInfo" })[item.status]
+        return { { ("%-3s"):format(item.status), hl }, { item.rel } }
       end,
       confirm = function(picker, item)
         picker:close()
         if not item then return end
         vim.schedule(function()
           if item.left and item.right then
-            M.diff(item.left, item.right, label(a) .. "/" .. item.rel, label(b) .. "/" .. item.rel)
+            M.diff(item.left, item.right, label(item.left), label(item.right))
           else
             vim.cmd("tabnew " .. vim.fn.fnameescape(item.left or item.right))
           end

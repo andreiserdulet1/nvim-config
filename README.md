@@ -180,7 +180,7 @@ Every comparison opens in its own tab, labelled on top, with ✕ to close it
 | `<Space>Dr` | this file with the **same path in another repo** — migrations |
 | `<Space>Db` | this file with another branch |
 | `<Space>Do` / `<Space>Dc` | with another open file / with the clipboard |
-| `<Space>DF` | **two repos or folders, file by file**: every changed, added and removed file, with a diff preview; `<CR>` opens one, `<Space>fc` returns to the list |
+| `<Space>DF` | **two repos or folders, file by file**: every changed, added and removed file — and moved ones, matched up (`R` moved unchanged, `R~` moved and edited) — with a diff preview; `<CR>` opens one, `<Space>fc` returns to the list |
 
 To **work in two repos at once**, `<Space>Dt` opens another repo in a new tab
 with its own working directory — the pickers, grep, the tree, terminals and
@@ -493,6 +493,11 @@ Repos that don't ship `@angular/language-service` fall back to a pinned copy in
 
 ### Moving around a component
 
+`<Space>or` (or right-click → *Related files…*) lists where this component or
+service is wired in — the **route** that loads it, the **module** that declares
+it, the **store** files, the **templates** that render its selector, its spec, and
+every other usage — and jumps there with a preview.
+
 A component is up to four files sharing a stem. These jump between them:
 
 | Key | Goes to |
@@ -607,6 +612,26 @@ have nothing to read until then.
 
 ---
 
+### Tests in the gutter
+
+Open a spec and every `describe` and `it` has a **▶** in the gutter. **Click it**
+(or `<Space>nT` on the line) to run just that test; `<Space>nF` runs the whole
+spec. When the run ends the marks turn into **✓** and **✗**, and a `describe` is
+✗ if anything inside it failed. `<Space>nf` shows the output; on a ✗ line,
+`<Space>aF` (or right-click → *Claude: fix failing test*) hands Claude the test,
+its location and the failure.
+
+Karma can't be told "run only the test called X" through `ng test`, so a single
+test runs the way you'd do it by hand: a copy of the spec, with that `it` turned
+into `fit`, sits beside it for the run and is deleted afterwards — your file is
+never edited. The copy is called `*.nvim-focus.spec.ts` and is in the global
+gitignore.
+
+**Coverage:** `<Space>nC` runs the spec with `--code-coverage`; the line numbers
+of the files it touched turn green (ran) or red (never ran). `<Space>uC` toggles
+the colours. It reads the HTML report Angular's default Karma setup writes, so no
+`karma.conf` changes are needed, and warns when a file has changed since.
+
 ### Running tests
 
 Every repo here uses Karma + Jasmine, so there is no neotest adapter. Instead the
@@ -696,6 +721,27 @@ move.
 
 To review a whole branch before opening a PR: `<Space>gm` diffs everything on
 your branch against master in a proper two-pane view. `<Space>gq` closes it.
+
+### Git, JetBrains-style
+
+`<Space>gv` — or right-click → *Git…*, or right-click the branch in the
+statusline — is one menu with the file, the change under the cursor and the
+repository: add, unstage, **rollback**, show diff, history, annotate, compare with
+a branch, commit, commit and push, push, pull, fetch, branches, **stash /
+unstash**, undo last commit, rollback all. **Click a change marker** in the
+gutter to show, stage or roll back that change.
+
+| Key | Does |
+|---|---|
+| `<Space>gA` / `<Space>gR` | add / rollback this file (rollback asks first) |
+| `<Space>gk` / `<Space>gK` | commit… / commit and push… (offers to stage everything if nothing is staged) |
+| `<Space>gp` / `<Space>gP` | push (sets the upstream the first time) / pull with rebase and autostash |
+| `<Space>gn` | branches: switch — offering to stash if you have changes — or create one |
+| `<Space>gS` / `<Space>gU` | stash (with untracked files) / unstash: pop, apply or drop, with the diff as preview |
+| `<Space>gz` | undo the last commit, keeping its changes staged (warns if it's pushed) |
+
+Anything that throws work away asks first. lazygit (`<Space>gg`) is still there
+for everything else.
 
 ### Merge conflicts
 
