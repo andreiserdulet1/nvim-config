@@ -88,10 +88,11 @@ opt.shortmess:append("cI")     -- quieter messages, no intro screen
 -- patched font draws each one as a boxed question mark. This flag picks between
 -- the glyphs and plain-text stand-ins; config/icons.lua holds both sets.
 --
--- Set it to true once the glyph probe in `:checkhealth nvim-config` renders as
--- icons. It has to be set before any plugin spec is evaluated, which is why it
--- lives here rather than inside the module it controls.
-vim.g.have_nerd_font = false
+-- On: iTerm2 is set to MesloLGL Nerd Font Mono (installed by the Brewfile).
+-- If the glyph probe in `:checkhealth nvim-config` shows boxes in some other
+-- terminal, set this to false. It has to be set before any plugin spec is
+-- evaluated, which is why it lives here rather than inside the module.
+vim.g.have_nerd_font = true
 
 local icons = require("config.icons")
 

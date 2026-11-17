@@ -80,6 +80,13 @@ return {
         },
       },
       default_component_configs = {
+        icon = {
+          folder_closed = icons.folder.closed,
+          folder_open = icons.folder.open,
+          folder_empty = icons.folder.empty,
+          -- Without a Nerd Font, files get no icon rather than a boxed "?".
+          default = vim.g.have_nerd_font and "\u{f15b}" or "",
+        },
         git_status = {
           symbols = icons.git_status,
         },

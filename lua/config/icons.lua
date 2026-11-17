@@ -47,12 +47,15 @@ local NERD = {
     quit       = " ", -- U+F011
   },
 
+  -- U+E5FF U+E5FE U+F114 -- seti folders, then fa folder-o for an empty one
+  folder = { closed = "", open = "", empty = "" },
+
   git_status = {
     added     = "",     -- U+F067
     modified  = "",  -- U+F044
     deleted   = "✖",   -- U+2716, renders anywhere
     renamed   = "󰁕",   -- U+F0055
-    untracked = "", -- U+F128
+    untracked = "", -- U+F005, a star: "new". U+F128 was a question mark, which read as "broken icon"
     ignored   = "",   -- U+F070
     unstaged  = "󰄱",  -- U+F0131
     staged    = "",    -- U+F00C
@@ -79,9 +82,11 @@ local TEXT = {
     cheatsheet = "", jira = "", plugins = "", quit = "",
   },
 
+  folder = { closed = "▸", open = "▾", empty = "▹" },
+
   git_status = {
     added = "+", modified = "~", deleted = "x", renamed = ">",
-    untracked = "?", ignored = "·", unstaged = "!", staged = "*", conflict = "!",
+    untracked = "*", ignored = "·", unstaged = "!", staged = "✓", conflict = "!",
   },
 }
 
